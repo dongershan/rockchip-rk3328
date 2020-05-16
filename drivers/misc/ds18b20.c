@@ -47,7 +47,6 @@ struct ds1820_device
 };
 static int ds1820_major = 0;
 static struct class *my_class;
-static spinlock_t lock_ds1820;
 static unsigned char current_resolvetion = DS1820_9_BIT_RESOLUTION;
 
 static const unsigned char ds18b20_crc_table[] =
@@ -101,7 +100,6 @@ static unsigned int ds1820_reset(struct ds1820_device *dev)
 {
 	unsigned int ret = 0, i = 0;
 	preempt_disable();
-	spin_lock_irq(&lock_ds1820);
 	make_dq_out(dev);
 	set_dq(dev, 0);	/* set dq low to info slave */
 	udelay(500);	/* hold for 480~960us */
@@ -117,7 +115,6 @@ static unsigned int ds1820_reset(struct ds1820_device *dev)
 	udelay(500);
 	make_dq_out(dev);
 	set_dq(dev, 1);
-	spin_unlock_irq(&lock_ds1820);
 	preempt_enable();
 	return ret;
 }
@@ -179,28 +176,21 @@ void ds1820_write_byte(struct ds1820_device *dev, char cmd)
 void ds1820_init_config(struct ds1820_device *dev)
 {
 	preempt_disable();
-	spin_lock_irq(&lock_ds1820);
 	ds1820_write_byte(dev, DS1820_CMD_SKIP_ROM);
 	ds1820_write_byte(dev, DS1820_CMD_CONFIG);
 	ds1820_write_byte(dev, DS1820_TH_VALUE);//TH Max
 	ds1820_write_byte(dev, DS1820_TL_VALUE);//TL Min
 	ds1820_write_byte(dev, current_resolvetion);//resolution	
-	spin_unlock_irq(&lock_ds1820);
 	preempt_enable();
 }
 
 static int ds1820_open(struct inode *inode, struct file *filp)
 {
 	struct ds1820_device *dev;
-	int retval,ret;
  
 	dev = container_of(inode->i_cdev, struct ds1820_device, cdev);
 	filp->private_data = dev;
-	ret = mutex_lock_interruptible(&dev->res_mutex);
-	retval = ds1820_reset(dev) ? -ENODEV: 0;
-
-	mutex_unlock(&dev->res_mutex);
-	return retval;
+	return 0;
 }
  
 static int ds1820_release(struct inode *inode, struct file *filp)
@@ -221,20 +211,17 @@ static ssize_t ds1820_read(struct file *filp, char *buf, size_t count,
 
 	dev = filp->private_data;
 	ret = mutex_lock_interruptible(&dev->res_mutex);
-
+	
 	ds1820_reset(dev);
 	ds1820_init_config(dev);
 
 	ds1820_reset(dev);
 	/* send temperature convert command */
 	preempt_disable();
-	spin_lock_irq(&lock_ds1820);
 	ds1820_write_byte(dev, DS1820_CMD_SKIP_ROM);
 	ds1820_write_byte(dev, DS1820_CMD_CONVERT);
-	spin_unlock_irq(&lock_ds1820);
 	preempt_enable();
 	
-	mutex_unlock(&dev->res_mutex);
 	switch(current_resolvetion)
 	{
 		case DS1820_9_BIT_RESOLUTION:mdelay(DS1820_9_BIT_RES_MDEALY);break;
@@ -244,13 +231,10 @@ static ssize_t ds1820_read(struct file *filp, char *buf, size_t count,
 		default:break;
 	}
 
-	ret =  mutex_lock_interruptible(&dev->res_mutex);
-
 retry:
 	ds1820_reset(dev);
 	/* send read scratchpad command */
 	preempt_disable();
-	spin_lock_irq(&lock_ds1820);
 	ds1820_write_byte(dev,DS1820_CMD_SKIP_ROM);
 	ds1820_write_byte(dev, DS1820_CMD_READSCR);
 
@@ -260,7 +244,6 @@ retry:
 		tmp[i] = ds1820_read_byte(dev);
 	}
 
-	spin_unlock_irq(&lock_ds1820);	
 	preempt_enable();
 
 	/*crc*/
@@ -303,7 +286,6 @@ static int ds1820_probe(struct platform_device *pdev) {
     struct ds1820_device *ds1820_devp;
 	int result;
 
-	spin_lock_init(&lock_ds1820);
 
 	ds1820_devp = kzalloc(sizeof(struct ds1820_device), GFP_KERNEL);
 	if (!ds1820_devp) {
