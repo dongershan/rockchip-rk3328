@@ -720,6 +720,12 @@ static void firefly_init_work(struct work_struct *work) {
                 ret = device_pca957x_init(firefly->chip, firefly->invert);
             }
     }
+
+	if(ret)
+		dev_info(firefly->dev,"init failed!!!\n");
+	else
+		dev_info(firefly->dev,"init successed!!!\n");
+
     return;
 }
 
@@ -811,9 +817,13 @@ static int pca953x_probe(struct i2c_client *client,
 		} else {
 			ret = device_pca957x_init(firefly->chip, firefly->invert);
 		}
+
 		if (ret) {
+			dev_info(firefly->dev,"init failed!!!\n");
 			return ret;
 		}
+		else
+			dev_info(firefly->dev,"init successed!!!\n");
 	} else {
 		ret = gpio_request(firefly->det_gpio, firefly->sub_det);
 		if(ret != 0){
