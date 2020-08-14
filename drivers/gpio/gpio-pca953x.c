@@ -786,7 +786,12 @@ static int pca953x_probe(struct i2c_client *client,
 	//pca953x_setup_gpio(chip, 0x0010);
 
 	/*daijh*/
-	firefly = kzalloc(sizeof(struct check_sub), GFP_KERNEL);
+	//firefly = kzalloc(sizeof(struct check_sub), GFP_KERNEL);
+	firefly = devm_kzalloc(&client->dev,
+				sizeof(struct check_sub), GFP_KERNEL);
+	if (firefly == NULL)
+		return -ENOMEM;
+
 	INIT_DELAYED_WORK(&firefly->init_work, firefly_init_work);
 
 	firefly->dev = dev;
@@ -820,7 +825,7 @@ static int pca953x_probe(struct i2c_client *client,
 
 		if (ret) {
 			dev_info(firefly->dev,"init failed!!!\n");
-			return ret;
+			return -ret;
 		}
 		else
 			dev_info(firefly->dev,"init successed!!!\n");
