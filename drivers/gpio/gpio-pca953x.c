@@ -625,19 +625,33 @@ static int pca953x_irq_setup(struct pca953x_chip *chip,
 }
 #endif
 
-static int device_pca953x_init(struct pca953x_chip *chip, u32 invert)
+static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct check_sub *firefly)
 {
 	int ret;
 	u8 val[MAX_BANK];
 
+	dev_info(firefly->dev,"device_pca953x_init!!!\n");
+
 	ret = pca953x_read_regs(chip, PCA953X_OUTPUT, chip->reg_output);
 	if (ret)
+	{
+		dev_info(firefly->dev,"%s: error PCA953X_OUTPUT: %d !!!\n", __func__, ret);
 		goto out;
+	}
+
+	dev_info(firefly->dev,"%s: PCA953X_OUTPUT: %s !!!\n", __func__, chip->reg_output);
+
 
 	ret = pca953x_read_regs(chip, PCA953X_DIRECTION,
 			       chip->reg_direction);
 	if (ret)
+	{
+		dev_info(firefly->dev,"%s: error PCA953X_DIRECTION: %d !!!\n", __func__, ret);
 		goto out;
+	}
+
+	dev_info(firefly->dev,"%s: PCA953X_DIRECTION: %s !!!\n", __func__, chip->reg_direction);
+
 
 	/* set platform specific polarity inversion */
 	if (invert)
@@ -709,13 +723,18 @@ static void firefly_init_work(struct work_struct *work) {
     int ret = 0;
     int value = 0;
 
+	dev_info(firefly->dev,"firefly_init_work!!!\n");
+
     if (firefly->det_gpio > 0)
     	value = gpio_get_value(firefly->det_gpio);
+
+	dev_info(firefly->dev,"firefly->det_gpio:%d !\n",firefly->det_gpio);
+
     if(!value) {
         dev_info(firefly->dev,"%s:work is working!\n",__func__);
         mdelay(1000);
         if (firefly->chip->chip_type == PCA953X_TYPE) {
-                ret = device_pca953x_init(firefly->chip, firefly->invert);
+                ret = device_pca953x_init(firefly->chip, firefly->invert, firefly);
             } else {
                 ret = device_pca957x_init(firefly->chip, firefly->invert);
             }
@@ -724,7 +743,7 @@ static void firefly_init_work(struct work_struct *work) {
 	if(ret)
 		dev_info(firefly->dev,"init failed!!!\n");
 	else
-		dev_info(firefly->dev,"init successed!!!\n");
+		dev_info(firefly->dev,"init successed!!! \n");
 
     return;
 }
@@ -818,7 +837,7 @@ static int pca953x_probe(struct i2c_client *client,
 		firefly->det_gpio = INVALID_GPIO;
 
 		if (firefly->chip->chip_type == PCA953X_TYPE) {
-			ret = device_pca953x_init(firefly->chip, firefly->invert);
+			ret = device_pca953x_init(firefly->chip, firefly->invert, firefly);
 		} else {
 			ret = device_pca957x_init(firefly->chip, firefly->invert);
 		}
@@ -828,7 +847,7 @@ static int pca953x_probe(struct i2c_client *client,
 			return -ret;
 		}
 		else
-			dev_info(firefly->dev,"init successed!!!\n");
+			dev_info(firefly->dev,"%s init successed!!!\n", firefly->name);
 	} else {
 		ret = gpio_request(firefly->det_gpio, firefly->sub_det);
 		if(ret != 0){
