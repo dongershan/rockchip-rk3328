@@ -401,21 +401,9 @@ static const struct xc7022_mode supported_modes[] = {
 	// 	.vts_def = 0x0680,
 	// 	.reg_list = xc7022_480p_regs,
 	// },
-	{
-		.width = 1280,
-		.height = 720,
-		.max_fps = {
-			.numerator = 10000,
-			.denominator = 300000,
-		},
-		.exp_def = 0x0600,
-		.hts_def = 0x12c0,
-		.vts_def = 0x0680,
-		.reg_list = xc6130_720p_regs,
-	},
 	// {
-	// 	.width = 1920,
-	// 	.height = 1080,
+	// 	.width = 1280,
+	// 	.height = 720,
 	// 	.max_fps = {
 	// 		.numerator = 10000,
 	// 		.denominator = 300000,
@@ -423,8 +411,20 @@ static const struct xc7022_mode supported_modes[] = {
 	// 	.exp_def = 0x0600,
 	// 	.hts_def = 0x12c0,
 	// 	.vts_def = 0x0680,
-	// 	.reg_list = xc6130_1080p_regs,
+	// 	.reg_list = xc6130_720p_regs,
 	// },
+	{
+		.width = 1920,
+		.height = 1080,
+		.max_fps = {
+			.numerator = 10000,
+			.denominator = 300000,
+		},
+		.exp_def = 0x0600,
+		.hts_def = 0x12c0,
+		.vts_def = 0x0680,
+		.reg_list = xc6130_1080p_regs,
+	},
 
 };
 
