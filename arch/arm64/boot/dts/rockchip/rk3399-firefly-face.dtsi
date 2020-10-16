@@ -303,7 +303,7 @@
 
 	XC6130: XC6130@46{
 		status = "disabled";
-		compatible = "firefly,xc7022";
+		compatible = "firefly,xc6130";
 		reg = <0x23>;
 		reset-gpios = <&gpio1 22 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
