@@ -30,7 +30,7 @@
 #define DS1820_10_BIT_RES_MDEALY	(188)
 #define DS1820_11_BIT_RES_MDEALY	(375)
 #define DS1820_12_BIT_RES_MDEALY	(750)
- 
+
 #define DATA_CHECK_MAX_TIMES	10
 #define DEVICE_NAME "ds1820"
 #define MAX_CONVERT_WAIT_TIMES	7
@@ -69,10 +69,10 @@ static const unsigned char ds18b20_crc_table[] =
 	0x74,0x2A,0xC8,0x96,0x15,0x4B,0xA9,0xF7,0xB6,0xE8,0x0A,0x54,0xD7,0x89,0x6B,0x35
 };
 
-unsigned char ds18b20_cal_crc_table(unsigned char *ptr, unsigned char len) 
+unsigned char ds18b20_cal_crc_table(unsigned char *ptr, unsigned char len)
 {
     unsigned char  crc = 0x00;
- 
+
     while (len--)
     {
         crc = ds18b20_crc_table[crc ^ *ptr++];
@@ -104,7 +104,7 @@ static unsigned int ds1820_reset(struct ds1820_device *dev)
 	set_dq(dev, 0);	/* set dq low to info slave */
 	udelay(500);	/* hold for 480~960us */
 	set_dq(dev, 1);	/* release dq */
-	make_dq_in(dev);	
+	make_dq_in(dev);
 	//udelay(60);	/* wait for 60us, ds1820 will hold dq low for 240us */
 	do {
         udelay(10);
@@ -155,7 +155,7 @@ void ds1820_write_bit(struct ds1820_device *dev, char bitValue)
 	if( bitValue == 1 ){
 			set_dq(dev, 1);
 	}else{
-			set_dq(dev, 0); 
+			set_dq(dev, 0);
 	}
 	udelay(45);
 	set_dq(dev, 1);
@@ -168,7 +168,7 @@ void ds1820_write_byte(struct ds1820_device *dev, char cmd)
 
 	for(i=0; i<8;i++){
 			temp = cmd>>i;
-			temp &= 0x01; 
+			temp &= 0x01;
 			ds1820_write_bit(dev, temp);
 	}
 }
@@ -180,22 +180,22 @@ void ds1820_init_config(struct ds1820_device *dev)
 	ds1820_write_byte(dev, DS1820_CMD_CONFIG);
 	ds1820_write_byte(dev, DS1820_TH_VALUE);//TH Max
 	ds1820_write_byte(dev, DS1820_TL_VALUE);//TL Min
-	ds1820_write_byte(dev, current_resolvetion);//resolution	
+	ds1820_write_byte(dev, current_resolvetion);//resolution
 	preempt_enable();
 }
 
 static int ds1820_open(struct inode *inode, struct file *filp)
 {
 	struct ds1820_device *dev;
- 
+
 	dev = container_of(inode->i_cdev, struct ds1820_device, cdev);
 	filp->private_data = dev;
 	return 0;
 }
- 
+
 static int ds1820_release(struct inode *inode, struct file *filp)
 {
-	printk("ds1820_release ~~~~\r\n");
+	//printk("ds1820_release ~~~~\r\n");
 	return 0;
 }
 
@@ -211,7 +211,7 @@ static ssize_t ds1820_read(struct file *filp, char *buf, size_t count,
 
 	dev = filp->private_data;
 	ret = mutex_lock_interruptible(&dev->res_mutex);
-	
+
 	ds1820_reset(dev);
 	ds1820_init_config(dev);
 
@@ -221,7 +221,7 @@ static ssize_t ds1820_read(struct file *filp, char *buf, size_t count,
 	ds1820_write_byte(dev, DS1820_CMD_SKIP_ROM);
 	ds1820_write_byte(dev, DS1820_CMD_CONVERT);
 	preempt_enable();
-	
+
 	switch(current_resolvetion)
 	{
 		case DS1820_9_BIT_RESOLUTION:mdelay(DS1820_9_BIT_RES_MDEALY);break;
@@ -256,15 +256,15 @@ retry:
 
 	/*singal bit check， tmp[1] only equal to 00000xxx or 11111xxx */
 	if((--try) &&
-		((tmp[1]&0xf8)!=0xf8) && 
+		((tmp[1]&0xf8)!=0xf8) &&
 			((tmp[1]>>3)!=0))
 	{
-		printk("ds18b20 signal err %x try = %d\r\n", tmp[1], try);
+		//printk("ds18b20 signal err %x try = %d\r\n", tmp[1], try);
 		goto retry;
 	}
 
     if(try <= 0) {
-        printk("ds18b20 data try_max exit ..\r\n");
+        //printk("ds18b20 data try_max exit ..\r\n");
         mutex_unlock(&dev->res_mutex);
         return -EFAULT;
     }
@@ -291,7 +291,7 @@ static int ds1820_probe(struct platform_device *pdev) {
 	if (!ds1820_devp) {
 		result = -ENOMEM;
 	}
- 
+
     result = of_property_read_u32(ds1820_node, "ds18b20-id", &ds1820_devp->id);
     if(result != 0)
         return result;
@@ -301,17 +301,17 @@ static int ds1820_probe(struct platform_device *pdev) {
 
 	ds1820_devp->dq_gpio = of_get_named_gpio_flags(ds1820_node, "ds1820-dq", 0, 0);
     result = gpio_is_valid(ds1820_devp->dq_gpio);
-	if (!result) 
-		return result; 
-     
+	if (!result)
+		return result;
+
     result = gpio_request(ds1820_devp->dq_gpio, ds1820_devp->name);
-    if (result) { 
-        printk("gpio %d request failed!\n", ds1820_devp->dq_gpio); 
-        gpio_free(ds1820_devp->dq_gpio); 
+    if (result) {
+        printk("gpio %d request failed!\n", ds1820_devp->dq_gpio);
+        gpio_free(ds1820_devp->dq_gpio);
         return result;
     }
-    gpio_direction_output(ds1820_devp->dq_gpio, 1); 
-	
+    gpio_direction_output(ds1820_devp->dq_gpio, 1);
+
 	mutex_init(&ds1820_devp->res_mutex);
 	/* setup cdev */
 	cdev_init(&ds1820_devp->cdev, &ds1820_fops);
@@ -319,7 +319,7 @@ static int ds1820_probe(struct platform_device *pdev) {
 	ds1820_devp->cdev.ops = &ds1820_fops;
 	if (cdev_add(&ds1820_devp->cdev, MKDEV(ds1820_major, ds1820_devp->id), 1))
 		printk(KERN_NOTICE "Error adding ds1820 cdev!\n");
- 
+
 	/* setup device node */
 	device_create(my_class, NULL, MKDEV(ds1820_major, ds1820_devp->id), \
 				NULL, "ds18b20_%d", ds1820_devp->id);
@@ -334,7 +334,7 @@ static int ds1820_remove(struct platform_device *dev) {
 	dev_t devno = MKDEV(ds1820_major, ds1820_devp->id);
 	if (ds1820_devp)
 		cdev_del(&ds1820_devp->cdev);
- 
+
 	gpio_free(ds1820_devp->dq_gpio);
 	kfree(ds1820_devp);
 	device_destroy(my_class, devno);
