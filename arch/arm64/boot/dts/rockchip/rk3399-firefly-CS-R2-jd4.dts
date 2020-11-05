@@ -3,49 +3,125 @@
 #include "rk3399-firefly-port.dtsi"
 #include <dt-bindings/sensor-dev.h>
 
+
+#define PCA955_I2C_CLK 100000
+
 / {
-	model = "AIO-3399-JD4 Board (Linux Opensource)";
+	model = "CS2-AIO-3399JD4-SERVER Board (Linux Opensource)";
 	compatible = "rockchip,rk3399-firefly", "rockchip,rk3399";
 
 	/delete-property/ rt5640-sound;
+	/delete-node/ wireless-wlan;
+	/delete-node/ wireless-bluetooth;
+	/delete-node/ vcc5v0_host;
+
+	///delete-node/ vcc-mipi;
+
+	//UDI_KEY
+	// gpio-keys {
+    //     compatible = "gpio-keys";
+    //     #address-cells = <1>;
+    //     #size-cells = <0>;
+    //     autorepeat;
+
+    //     pinctrl-names = "default";
+    //     pinctrl-0 = <&pwrbtn>;
+
+    //     button@0 {
+    //         gpios = <&gpio1 20 GPIO_ACTIVE_LOW>;
+    //         linux,code = <KEY_POWER>;
+    //         label = "GPIO Key Power";
+    //         linux,input-type = <1>;
+    //         gpio-key,wakeup = <1>;
+    //         debounce-interval = <100>;
+    //     };
+    // };
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		autorepeat;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwrbtn>;
+
+		button@0 {
+			gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;		//power_key       GPIO2_B3
+			linux,code = <KEY_POWER>;
+			label = "GPIO Key Power";
+			linux,input-type = <1>;
+			gpio-key,wakeup = <1>;
+			debounce-interval = <100>;
+		};
+	};
+
+
+	UDI-keys {
+		compatible = "gpio-keys";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		autorepeat;
+
+		// pinctrl-names = "default";
+		// pinctrl-0 = <&pwrbtn>;
+
+		button@UDI_KEY {
+			gpios = <&gpio1 20 GPIO_ACTIVE_LOW>;		//power_key       GPIO1_C4
+			linux,code = <KEY_POWER>;
+			label = "UDI KEY";
+			linux,input-type = <1>;
+			gpio-key,wakeup = <1>;
+			debounce-interval = <100>;
+		};
+	};
 
 	test-power {
 		status = "okay";
 	};
 
-	fan_ctl: fan-ctl-regulator {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		regulator-always-on;
-		regulator-boot-on;
-		gpio = <&gpio3 10 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		regulator-name = "fan_ctl";
-		pinctrl-0 = <&fan_drv>;
-	};
-
-	VCC5V0_HOST0_EN: VCC5V0-HOST0-EN {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		regulator-always-on;
-		regulator-boot-on;
-		gpio = <&gpio1 3 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&vcc5v0_host0_en>;
-		regulator-name = "vcc5v0_host0";
+	ds18b20_1 {
+		compatible = "firefly,ds1820";
+		ds1820-dq = <&gpio4 27 GPIO_ACTIVE_LOW>; //GPIO4_D3 TEMP_DET_1
+		ds18b20-id = <1>;
 		status = "okay";
 	};
 
-	VCC5V0_HOST1_EN: VCC5V0-HOST1-EN {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		regulator-always-on;
-		regulator-boot-on;
-		gpio = <&gpio1 0 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&vcc5v0_host1_en>;
-		regulator-name = "vcc5v0_host1";
+	ds18b20_2 {
+		compatible = "firefly,ds1820";
+		ds1820-dq = <&gpio4 28 GPIO_ACTIVE_LOW>; //GPIO4_D4 TEMP_DET_2
+		ds18b20-id = <2>;
 		status = "okay";
+	};
+
+	ds18b20_3 {
+		compatible = "firefly,ds1820";
+		ds1820-dq = <&gpio4 26 GPIO_ACTIVE_LOW>; //GPIO4_D2 TEMP_DET_3
+		ds18b20-id = <3>;
+		status = "okay";
+	};
+
+	ds18b20_4 {
+		compatible = "firefly,ds1820";
+		ds1820-dq = <&gpio4 21 GPIO_ACTIVE_LOW>; //GPIO4_C5 TEMP_DET_4
+		ds18b20-id = <4>;
+		status = "okay";
+	};
+
+	ntc1 {
+		compatible = "ntc,sdnt1608x103f";
+		pullup-uv = <1800000>;
+		pullup-ohm = <10000>;
+		pulldown-ohm = <0>;
+		io-channels = <&saradc 2>;
+	};
+
+	ntc2 {
+		compatible = "ntc,sdnt1608x103f";
+		pullup-uv = <1800000>;
+		pullup-ohm = <10000>;
+		pulldown-ohm = <0>;
+		io-channels = <&saradc 3>;
 	};
 
 	HUB20_PWR_EN: HUB20-PWR-EN {
@@ -60,17 +136,82 @@
 		status = "okay";
 	};
 
-	HUB30_PWR_EN: HUB30-PWR-EN {
+
+	WDPW_PWR_EN: WDPW-PWR-EN {
 		compatible = "regulator-fixed";
 		enable-active-high;
 		regulator-always-on;
 		regulator-boot-on;
-		gpio = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio2 22 GPIO_ACTIVE_HIGH>;            //GPIO2_C6
 		pinctrl-names = "default";
-		pinctrl-0 = <&hub30_pwr_en>;
-		regulator-name = "vcc5v0_hub30";
+		pinctrl-0 = <&wdpw_en>;
+		regulator-name = "vcc5v0_wdpw";
 		status = "okay";
 	};
+
+	leds {
+		compatible = "gpio-leds";
+		BMC_LED {
+			//BMC LED
+			gpios = <&gpio4 22 GPIO_ACTIVE_HIGH>;	//GPIO4_C6  PWM1  32*4 + 22 = 128 + 22 = 150
+			default-state = "on";
+		};
+
+		BUZZER {
+			//BMC LED
+			gpios = <&gpio1 17 GPIO_ACTIVE_HIGH>;	//GPIO1_C1  PWM1  32*1 + 17 = 32 + 17 = 49
+			default-state = "off";
+		};
+
+
+		RESET_HUB_1 {
+			//GPIO1_A3
+			gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+
+
+		RESET_HUB_2 {
+			//GPIO1_B5
+			gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+
+
+		RESET_HUB_3 {
+			//GPIO1_A1
+			gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+
+		HUB30_PWR_EN {
+			//USB转前兆以太网卡
+			gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+
+		UID_LED {
+			//USB转前兆以太网卡
+			gpios = <&gpio4 4 GPIO_ACTIVE_HIGH>; //GPIO4_A4
+			default-state = "off";
+		};
+
+
+		// work {
+		// 	gpios = <&gpio4 18 GPIO_ACTIVE_HIGH>;	//GPIO4_C2  PWM0
+		// 	default-state = "off";
+		// };
+
+
+		// work {
+		// 	gpios = <&gpio2 27 GPIO_ACTIVE_HIGH>;	//GPIO2_D3
+		// 	default-state = "off";
+		// };
+	};
+};
+
+&pwrbtn {
+        rockchip,pins = <2 11 RK_FUNC_GPIO &pcfg_pull_up>;		//power_key       GPIO2_B3
 };
 
 &gmac {
@@ -82,21 +223,174 @@
 	status = "okay";
 };
 
-&i2c2 {
-	status = "disabled";
+&i2c0 {
+    rk808: pmic@1b {
+        /delete-property/ pmic,stby-gpio;
+		/delete-property/ rockchip,system-power-controller;
+        pinctrl-names = "default";
+        pinctrl-0 = <&pmic_int_l &pmic_dvs2 &pmic_hold>;
+
+		rtc {
+			status = "disabled";
+		};
+    };
+};
+
+&i2c1 {
 	i2c-scl-rising-time-ns = <300>;
 	i2c-scl-falling-time-ns = <15>;
+	clock-frequency = <100000>;
+	status = "okay";
 
-	sensor@4c {
-		status = "disabled";
-		compatible = "gs_mc3230";
-		reg = <0x4c>;
-		type = <SENSOR_TYPE_ACCEL>;
-		irq_enable = <0>;
-		poll_delay_ms = <30>;
-		layout = <1>;
+	pca9555_1_1: i2c1gpio@27 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x23>;
+		gpio-controller;
+		gpio-group-num = <1>;
+		//#gpio-cells = <2>;
+		det-gpio = <&gpio4 29 GPIO_ACTIVE_LOW>;		//GPIO4_D5_D_5V
+		label = "sub3";
+	};
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <24 IRQ_TYPE_EDGE_FALLING>;
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+		clock-output-names = "xin32k";
+		pinctrl-names = "default";
+		pinctrl-0 = <&rtc_8563>;
+		status = "okay";
+	};
+
+	pc9202: pc9202@3c {
+		status = "okay";
+		compatible = "firefly,pc9202";
+		reg = <0x3c>;
+		sw-gpio = <&gpio3 24 GPIO_ACTIVE_HIGH>;		//GPIO3_D0
+		pinctrl-names = "default";
+		pinctrl-0 = <&wdt_ctl>;
+	};
+
+	rk808_1: pmic@1_1b {
+		compatible = "firefly_rk808";
+		reg = <0x1b>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <21 IRQ_TYPE_LEVEL_LOW>;
+		// pmic,stby-gpio = <&gpio1 24 GPIO_ACTIVE_LOW>;
+		// pmic,hold-gpio = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+		// pinctrl-names = "default";
+		// pinctrl-0 = <&pmic_int_l &pmic_dvs2 &pmic_stby &pmic_hold>;
+		rockchip,system-power-controller;
 	};
 };
+
+&i2c2 {
+	 //i2c-scl-rising-time-ns = <300>;
+	 //i2c-scl-falling-time-ns = <300>;
+	clock-frequency = <PCA955_I2C_CLK>;
+	status = "okay";
+
+	pca9555_2_1: i2c2gpio@27 {
+		compatible = "nxp,pca9555";
+		reg = <0x27>;
+		gpio-controller;
+		gpio-group-num = <2>;
+		det-gpio = <&gpio2 2 GPIO_ACTIVE_LOW>;		//GPIO2_A2_D_5V
+		label = "sub6";
+	};
+
+	pca9555_2_2: i2c2gpio@23 {
+		compatible = "nxp,pca9555";
+		reg = <0x23>;
+		gpio-controller;
+		gpio-group-num = <3>;
+		det-gpio = <&gpio3 31 GPIO_ACTIVE_LOW>;		//GPIO3_D7_D_5V
+		label = "sub9";
+	};
+};
+
+
+
+&i2c4 {
+	 //i2c-scl-rising-time-ns = <300>;
+	 //i2c-scl-falling-time-ns = <300>;
+	clock-frequency = <PCA955_I2C_CLK>;
+	status = "okay";
+
+	pca9555_4_1: i2c4gpio@27 {
+        compatible = "nxp,pca9555";
+        reg = <0x27>;
+        gpio-controller;
+        label = "sub2";
+		gpio-group-num = <4>;
+		det-gpio = <&gpio3 25 GPIO_ACTIVE_LOW>;  //GPIO3_D1_D_5V
+    };
+
+	pca9555_4_2: i2c4gpio@23 {
+        compatible = "nxp,pca9555";
+        reg = <0x23>;
+        gpio-controller;
+        label = "sub5";
+		gpio-group-num = <5>;
+		det-gpio = <&gpio3 26 GPIO_ACTIVE_LOW>;		//GPIO3_D2_D_5V
+    };
+};
+
+&i2c7 {
+	 //i2c-scl-rising-time-ns = <300>;
+	 //i2c-scl-falling-time-ns = <300>;
+	clock-frequency = <PCA955_I2C_CLK>;
+	status = "okay";
+
+	pca9555_7_1: i2c7gpio@27 {
+		compatible = "nxp,pca9555";
+		reg = <0x27>;
+		gpio-controller;
+		gpio-group-num = <6>;
+		det-gpio = <&gpio3 27 GPIO_ACTIVE_LOW>;		//GPIO3_D3_D_5V
+		label = "sub8";
+	};
+
+	pca9555_7_2: i2c7gpio@23 {
+		compatible = "nxp,pca9555";
+		reg = <0x23>;
+		gpio-controller;
+		gpio-group-num = <7>;
+		det-gpio = <&gpio2 3 GPIO_ACTIVE_LOW>;		//GPIO2_A3_D_5V
+		label = "sub1";
+	};
+};
+
+&i2c6 {
+	 //i2c-scl-rising-time-ns = <300>;
+	 //i2c-scl-falling-time-ns = <300>;
+	clock-frequency = <PCA955_I2C_CLK>;
+	status = "okay";
+
+	pca9555_6_1: i2c6gpio@27 {
+        compatible = "nxp,pca9555";
+        reg = <0x27>;
+        gpio-controller;
+		gpio-group-num = <8>;
+		det-gpio = <&gpio1 22 GPIO_ACTIVE_LOW>;		//GPIO1_C6_D_5V
+        label = "sub4";
+    };
+
+	pca9555_6_2: i2c6gpio@23 {
+		compatible = "nxp,pca9555";
+		reg = <0x23>;
+		gpio-controller;
+		gpio-group-num = <9>;
+		det-gpio = <&gpio1 2 GPIO_ACTIVE_LOW>;		//GPIO1_A2_D_5V
+		label = "sub7";
+	};
+};
+
+
 
 &vcca1v8_codec {
 	regulator-min-microvolt = <900000>;
@@ -104,9 +398,7 @@
 };
 
 &spi1 {
-	dev-port = <0>;
-    status = "okay";
-	/delete-property/ spi_wk2xxx;
+    status = "disabled";
 };
 
 &vcc3v3_3g {
@@ -118,20 +410,35 @@
 };
 
 &pcie0 {
-	/delete-property/ ep-gpios;
+	status = "okay";
+	/delete-property/ pinctrl-names;		//Occupy the power pin of sub2-board
+	/delete-property/ pinctrl-0;
+//	/delete-property/ ep-gpios;
 };
 
 &fiq_debugger {
 	rockchip,baudrate = <115200>;  /* Only 115200 and 1500000 */
 };
 
+&spdif {
+    status = "disabled";
+};
+
+&sdio0 {
+    status = "disabled";
+};
 
 &rt5640 {
 	status = "disabled";
 };
 
+
+&uart0 {
+	status = "okay";
+};
+
 &uart4 {
-    status = "disabled";
+    status = "okay";
 };
 
 &dp_in_vopb {
@@ -150,6 +457,14 @@
 	bt656-supply = <&vcc_3v0>;
 };
 
+&i2s0 {
+    status = "disabled";
+};
+
+&i2s1 {
+    status = "disabled";
+};
+
 &vcc2v8_dvp {
 	regulator-min-microvolt = <1800000>;
 	regulator-max-microvolt = <1800000>;
@@ -164,6 +479,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&host_hub_vcc>;
 
+
+	/delete-property/ pmic_stby;
+
 	host-hub-vcc {
 		host_hub_vcc: host-hub-vcc {
 			rockchip,pins =
@@ -171,7 +489,6 @@
 				<4 29 RK_FUNC_GPIO &pcfg_output_high>;
 		};
 	};
-
 
 	hub_pwr_en {
 		// control VCC5V0_HOST3
@@ -188,12 +505,6 @@
 	};
 
 	vcc_host_en {
-		// control VCC5V0_HOST3
-		vcc5v0_host0_en: vcc5v0-host0-en {
-			rockchip,pins =
-				<1 3 RK_FUNC_GPIO &pcfg_output_high>;
-		};
-
 		// control VCC5V0_HOST0
 		vcc5v0_host1_en: vcc5v0-host1-en {
 			rockchip,pins =
@@ -208,6 +519,13 @@
 		};
 	};
 
+	rtc {
+		rtc_8563: rtc-8563 {
+			rockchip,pins =
+				<1 24 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
 	vcc_sd {
 		vcc_sd_h: vcc-sd-h {
 			rockchip,pins =
@@ -215,13 +533,17 @@
 		};
 	};
 
-	fan-ctl {
-        	fan_drv: fan-drv {
-             		rockchip,pins = <3 10 RK_FUNC_GPIO &pcfg_pull_none>;
-        };
-    };
+	watchdog {
+		wdt_ctl: wdt-ctl {
+			rockchip,pins =
+			<3 24 RK_FUNC_GPIO &pcfg_pull_none>;		//GPIO3_D0
+		};
 
-
+		wdpw_en: wdpw-en {
+			rockchip,pins =
+			<2 22 RK_FUNC_GPIO &pcfg_pull_none>;		//GPIO2_C6
+		};
+	};
 };
 
 &fusb0 {
@@ -243,9 +565,24 @@
 
     u2phy0_otg: otg-port {
         rockchip,vbus-always-on;
-        vbus-5v-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
+        // vbus-5v-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
         status = "okay";
     };
+
+	u2phy0_host: host-port {
+		/delete-property/ phy-supply;
+	};
+};
+
+
+&vcc_mipi {
+	status = "disabled";
+};
+
+&u2phy1 {
+	u2phy1_host: host-port {
+		/delete-property/ phy-supply;
+	};
 };
 
 &usbdrd3_0 {
@@ -255,33 +592,23 @@
 
 &usbdrd_dwc3_0 {
     dr_mode = "host";
+	status = "okay";
 };
 
 &route_hdmi {
 	status = "okay";
 };
 
-&rk808 {
-     /delete-property/ pmic,stby-gpio;
-     /delete-property/ pmic,hold-gpio;
-};
-
-&vcc_mipi {
-	status = "okay";
-};
-
 &dvdd_1v2 {
-	status = "okay";
+	status = "disabled";
 };
 
 &ov13850 {
-	pwdn-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disabled";
 };
 
 &ov13850_1 {
-	pwdn-gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disabled";
 };
 
 &rkisp1_0 {

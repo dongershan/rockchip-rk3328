@@ -601,6 +601,8 @@ static int hym8563_probe(struct i2c_client *client,
 	hym8563_clkout_register_clk(hym8563);
 #endif
 
+	dev_warn(&client->dev, "probe successed !\n");
+
 	return 0;
 }
 
