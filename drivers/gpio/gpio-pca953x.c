@@ -11,6 +11,8 @@
  *  the Free Software Foundation; version 2 of the License.
  */
 
+#include <linux/interrupt.h>
+#include <linux/of_gpio.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/gpio.h>
@@ -22,6 +24,7 @@
 #include <linux/of_platform.h>
 #endif
 #include <linux/acpi.h>
+#include <linux/delay.h>
 
 #define PCA953X_INPUT		0
 #define PCA953X_OUTPUT		1
@@ -46,6 +49,23 @@
 #define PCA_TYPE_MASK		0xF000
 
 #define PCA_CHIP_TYPE(x)	((x) & PCA_TYPE_MASK)
+
+#define INVALID_GPIO		   -1
+
+struct check_sub {
+	struct device *dev;
+	int det_gpio;
+	int det_irq;
+	bool en_level;
+    bool reset;
+	u32 invert;
+	struct pca953x_chip *chip;
+	const char *name;
+    struct delayed_work init_work;
+
+    char sub_en[10];
+    char sub_det[10];
+};
 
 static const struct i2c_device_id pca953x_id[] = {
 	{ "pca9505", 40 | PCA953X_TYPE | PCA_INT, },
@@ -107,6 +127,7 @@ struct pca953x_chip {
 	const char *const *names;
 	int	chip_type;
 	unsigned long driver_data;
+    bool reset;
 };
 
 static inline struct pca953x_chip *to_pca(struct gpio_chip *gc)
@@ -165,8 +186,9 @@ static int pca953x_write_regs(struct pca953x_chip *chip, int reg, u8 *val)
 	} else {
 		switch (chip->chip_type) {
 		case PCA953X_TYPE:
-			ret = i2c_smbus_write_word_data(chip->client,
-							reg << 1, (u16) *val);
+			//ret = i2c_smbus_write_word_data(chip->client,
+			//				reg << 1, (u16) *val);
+            ret = i2c_smbus_write_word_data(chip->client,reg << 1, (val[1] << 8) | val[0]);
 			break;
 		case PCA957X_TYPE:
 			ret = i2c_smbus_write_byte_data(chip->client, reg << 1,
@@ -364,8 +386,8 @@ static void pca953x_setup_gpio(struct pca953x_chip *chip, int gpios)
 	gc->set = pca953x_gpio_set_value;
 	gc->can_sleep = true;
 
-	gc->base = chip->gpio_start;
-	gc->ngpio = gpios;
+	gc->base = chip->gpio_start;    //-1;
+	gc->ngpio = gpios;              //0x10;
 	gc->label = chip->client->name;
 	gc->parent = &chip->client->dev;
 	gc->owner = THIS_MODULE;
@@ -624,6 +646,12 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert)
 		memset(val, 0, NBANK(chip));
 
 	ret = pca953x_write_regs(chip, PCA953X_INVERT, val);
+    if(!chip->reset) {
+        chip->reg_direction[0] = chip->reg_direction[0] & 0x7f; //网络时能脚
+        ret = pca953x_write_regs(chip, PCA953X_DIRECTION, chip->reg_direction);
+        chip->reg_output[0] = chip->reg_output[0] | 0x80;
+        ret = pca953x_write_regs(chip, PCA953X_OUTPUT, chip->reg_output);
+    }
 out:
 	return ret;
 }
@@ -660,19 +688,60 @@ out:
 	return ret;
 }
 
+static irqreturn_t sub_checkin_handler(int irq, void *dev_id){
+    int  value;
+    //int ret = 0;
+    struct check_sub *firefly = (struct check_sub *)dev_id;
+
+    value = gpio_get_value(firefly->det_gpio);
+    dev_info(firefly->dev,"%s: %s Interrupt is triggered!\n",__func__, firefly->name);
+    if(value) {
+        dev_info(firefly->dev,"%s:%s is pull out!\n",__func__,firefly->name);
+    } else {
+        dev_info(firefly->dev,"%s:%s is insert!\n",__func__, firefly->name);
+        schedule_delayed_work(&firefly->init_work, 1000);
+    }
+    return 0;
+}
+
+static void firefly_init_work(struct work_struct *work) {
+    struct check_sub *firefly = container_of(work, struct check_sub, init_work.work);
+    int ret = 0;
+    int value = 0;
+
+    if (firefly->det_gpio > 0)
+    	value = gpio_get_value(firefly->det_gpio);
+    if(!value) {
+        dev_info(firefly->dev,"%s:work is working!\n",__func__);
+        mdelay(1000);
+        if (firefly->chip->chip_type == PCA953X_TYPE) {
+                ret = device_pca953x_init(firefly->chip, firefly->invert);
+            } else {
+                ret = device_pca957x_init(firefly->chip, firefly->invert);
+            }
+    }
+    return;
+}
+
 static int pca953x_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
+	struct device *dev = &client->dev;
+	struct device_node *node = dev->of_node;
 	struct pca953x_platform_data *pdata;
 	struct pca953x_chip *chip;
 	int irq_base = 0;
 	int ret;
 	u32 invert = 0;
 
+	struct check_sub *firefly;
+	enum of_gpio_flags flag;
+
 	chip = devm_kzalloc(&client->dev,
 			sizeof(struct pca953x_chip), GFP_KERNEL);
 	if (chip == NULL)
 		return -ENOMEM;
+	chip->reset = false;
 
 	pdata = dev_get_platdata(&client->dev);
 	if (pdata) {
@@ -681,6 +750,7 @@ static int pca953x_probe(struct i2c_client *client,
 		invert = pdata->invert;
 		chip->names = pdata->names;
 	} else {
+		//进入这里
 		chip->gpio_start = -1;
 		irq_base = 0;
 	}
@@ -688,18 +758,18 @@ static int pca953x_probe(struct i2c_client *client,
 	chip->client = client;
 
 	if (id) {
-		chip->driver_data = id->driver_data;
+		//进入这里
+		chip->driver_data = id->driver_data; //driver_data = 0x1110
 	} else {
 		const struct acpi_device_id *id;
-
 		id = acpi_match_device(pca953x_acpi_ids, &client->dev);
 		if (!id)
 			return -ENODEV;
-
 		chip->driver_data = id->driver_data;
 	}
 
 	chip->chip_type = PCA_CHIP_TYPE(chip->driver_data);
+	//chip->chip_type = 0x1000;
 
 	mutex_init(&chip->i2c_lock);
 
@@ -707,21 +777,71 @@ static int pca953x_probe(struct i2c_client *client,
 	 * we can't share this chip with another i2c master.
 	 */
 	pca953x_setup_gpio(chip, chip->driver_data & PCA_GPIO_MASK);
+	//pca953x_setup_gpio(chip, 0x0010);
 
-	if (chip->chip_type == PCA953X_TYPE)
-		ret = device_pca953x_init(chip, invert);
-	else
-		ret = device_pca957x_init(chip, invert);
-	if (ret)
-		return ret;
+	/*daijh*/
+	firefly = kzalloc(sizeof(struct check_sub), GFP_KERNEL);
+	INIT_DELAYED_WORK(&firefly->init_work, firefly_init_work);
 
+	firefly->dev = dev;
+	firefly->det_gpio = -1;
+	firefly->chip = chip;
+	firefly->invert = invert;
+
+	firefly->reset = of_property_read_bool(node, "use_for_reset");
+	if(firefly->reset) {
+		chip->reset = true;
+		schedule_delayed_work(&firefly->init_work, 5000);
+		goto gpio_reset_init;
+	}
+	// sub name
+	of_property_read_string(node, "label", &firefly->name);
+	memset(firefly->sub_en, 0, sizeof(firefly->sub_en));
+	memset(firefly->sub_det, 0, sizeof(firefly->sub_det));
+	sprintf(firefly->sub_det, "%s_det", firefly->name);
+
+	// hotplug gpio
+	firefly->det_gpio = of_get_named_gpio_flags(node, "det-gpio", 0, &flag);
+	if(firefly->det_gpio < 0){
+		dev_info(dev, "Can not read property hp_det_gpio\n");
+		firefly->det_gpio = INVALID_GPIO;
+
+		if (firefly->chip->chip_type == PCA953X_TYPE) {
+			ret = device_pca953x_init(firefly->chip, firefly->invert);
+		} else {
+			ret = device_pca957x_init(firefly->chip, firefly->invert);
+		}
+		if (ret) {
+			return ret;
+		}
+	} else {
+		ret = gpio_request(firefly->det_gpio, firefly->sub_det);
+		if(ret != 0){
+			gpio_free(firefly->det_gpio);
+			return ret;
+		}
+		// set hotplug fun
+		firefly->det_irq = gpio_to_irq(firefly->det_gpio);
+		ret = request_irq(firefly->det_irq, sub_checkin_handler, IRQ_TYPE_EDGE_BOTH, "firefly_det", (void *)firefly);
+
+		ret = gpio_get_value(firefly->det_gpio);
+		if(ret == 0) {
+			dev_info(dev,"%s:%s is insert when boot!\n", __func__, firefly->name);
+			schedule_delayed_work(&firefly->init_work, 1000);
+		} else {
+			dev_info(dev,"%s:%s is not insert when boot!\n", __func__, firefly->name);
+		}
+	}
+
+gpio_reset_init:
 	ret = gpiochip_add(&chip->gpio_chip);
 	if (ret)
 		return ret;
 
 	ret = pca953x_irq_setup(chip, irq_base);
-	if (ret)
+	if (ret) {
 		return ret;
+	}
 
 	if (pdata && pdata->setup) {
 		ret = pdata->setup(client, chip->gpio_chip.base,
