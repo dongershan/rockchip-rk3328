@@ -56,6 +56,8 @@ struct check_sub {
 	struct device *dev;
 	int det_gpio;
 	int det_irq;
+	int det_active_low;
+	int det_state;
 	bool en_level;
     bool reset;
 	u32 invert;
@@ -147,7 +149,7 @@ static int pca953x_read_single(struct pca953x_chip *chip, int reg, u32 *val,
 	*val = ret;
 
 	if (ret < 0) {
-		dev_err(&chip->client->dev, "failed reading register\n");
+		//dev_err(&chip->client->dev, "failed reading register\n");
 		return ret;
 	}
 
@@ -229,7 +231,7 @@ static int pca953x_read_regs(struct pca953x_chip *chip, int reg, u8 *val)
 		val[1] = (u16)ret >> 8;
 	}
 	if (ret < 0) {
-		dev_err(&chip->client->dev, "failed reading register\n");
+		//dev_err(&chip->client->dev, "failed reading register\n");
 		return ret;
 	}
 
@@ -630,7 +632,7 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct che
 	int ret;
 	u8 val[MAX_BANK];
 
-	dev_info(firefly->dev,"device_pca953x_init!!!\n");
+	//dev_info(firefly->dev,"device_pca953x_init!!!\n");
 
 	ret = pca953x_read_regs(chip, PCA953X_OUTPUT, chip->reg_output);
 	if (ret)
@@ -639,9 +641,6 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct che
 		goto out;
 	}
 
-	dev_info(firefly->dev,"%s: PCA953X_OUTPUT: %s !!!\n", __func__, chip->reg_output);
-
-
 	ret = pca953x_read_regs(chip, PCA953X_DIRECTION,
 			       chip->reg_direction);
 	if (ret)
@@ -649,9 +648,6 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct che
 		dev_info(firefly->dev,"%s: error PCA953X_DIRECTION: %d !!!\n", __func__, ret);
 		goto out;
 	}
-
-	dev_info(firefly->dev,"%s: PCA953X_DIRECTION: %s !!!\n", __func__, chip->reg_direction);
-
 
 	/* set platform specific polarity inversion */
 	if (invert)
@@ -702,51 +698,94 @@ out:
 	return ret;
 }
 
-static irqreturn_t sub_checkin_handler(int irq, void *dev_id){
-    int  value;
-    //int ret = 0;
-    struct check_sub *firefly = (struct check_sub *)dev_id;
+int pca583_inserted(struct check_sub * firefly)
+{
+	//msleep(10);
+	firefly->det_state = gpio_get_value(firefly->det_gpio);
+	firefly->det_state = (firefly->det_state ? 0 : 1) ^ firefly->det_active_low;
 
-    value = gpio_get_value(firefly->det_gpio);
-    dev_info(firefly->dev,"%s: %s Interrupt is triggered!\n",__func__, firefly->name);
-    if(value) {
-        dev_info(firefly->dev,"%s:%s is pull out!\n",__func__,firefly->name);
-    } else {
-        dev_info(firefly->dev,"%s:%s is insert!\n",__func__, firefly->name);
-        schedule_delayed_work(&firefly->init_work, 1000);
-    }
-    return 0;
+	if(firefly->det_state) {
+		dev_info(firefly->dev,"【%s】: has been 【out】 !\n", firefly->name);
+		return 0;
+	} else {
+		dev_info(firefly->dev,"【%s】: has been 【in】 !\n", firefly->name);
+		return 1;
+	}
+}
+
+static irqreturn_t sub_checkin_handler(int irq, void *dev_id){
+	struct check_sub *firefly = (struct check_sub *)dev_id;
+
+	disable_irq_nosync(firefly->det_irq);
+
+	schedule_delayed_work(&firefly->init_work, 10);
+
+	// if(pca583_inserted(firefly))
+	// {
+	// 	schedule_delayed_work(&firefly->init_work, 500);
+	// }
+	// else
+	// 	enable_irq(firefly->det_irq);
+
+	return IRQ_HANDLED;
 }
 
 static void firefly_init_work(struct work_struct *work) {
     struct check_sub *firefly = container_of(work, struct check_sub, init_work.work);
     int ret = 0;
-    int value = 0;
 
-	dev_info(firefly->dev,"firefly_init_work!!!\n");
+	dev_info(firefly->dev,"----------%s start--------------\n", __func__);
 
-    if (firefly->det_gpio > 0)
-    	value = gpio_get_value(firefly->det_gpio);
+	//mdelay(1000);
+	//msleep(100);
 
-	dev_info(firefly->dev,"firefly->det_gpio:%d !\n",firefly->det_gpio);
+	if(pca583_inserted(firefly))
+	{
+		//  while(1)
+		//  {
+			if (firefly->chip->chip_type == PCA953X_TYPE) {
+				ret = device_pca953x_init(firefly->chip, firefly->invert, firefly);
+			} else {
+				ret = device_pca957x_init(firefly->chip, firefly->invert);
+			}
 
-    if(!value) {
-        dev_info(firefly->dev,"%s:work is working!\n",__func__);
-        mdelay(1000);
-        if (firefly->chip->chip_type == PCA953X_TYPE) {
-                ret = device_pca953x_init(firefly->chip, firefly->invert, firefly);
-            } else {
-                ret = device_pca957x_init(firefly->chip, firefly->invert);
-            }
-    }
+			if(ret)
+				dev_info(firefly->dev,"【%s】 init 【failed】!!!\n", firefly->name);
+			else
+			{
+				dev_info(firefly->dev,"【%s】 init 【successed】!!! \n", firefly->name);
+				//break;
+			}
+		// 	msleep(800);
+		//  }
 
-	if(ret)
-		dev_info(firefly->dev,"init failed!!!\n");
+		if(firefly->det_gpio)
+			enable_irq(firefly->det_irq);
+		else if (ret)		//如果没有det-gpio和初始化失败，就循环检测
+			schedule_delayed_work(&firefly->init_work, 1000);
+	}
 	else
-		dev_info(firefly->dev,"init successed!!! \n");
+		enable_irq(firefly->det_irq);
+
+	// if (firefly->chip->chip_type == PCA953X_TYPE) {
+	// 	ret = device_pca953x_init(firefly->chip, firefly->invert, firefly);
+	// } else {
+	// 	ret = device_pca957x_init(firefly->chip, firefly->invert);
+	// }
+
+	// if(ret)
+	// 	dev_info(firefly->dev,"【%s】 init 【failed】!!!\n", firefly->name);
+	// else
+	// 	dev_info(firefly->dev,"【%s】 init 【successed】!!! \n", firefly->name);
+
+	// if(firefly->det_gpio)
+	// 	enable_irq(firefly->det_irq);
+	// else if (ret)		//如果没有det-gpio和初始化失败，就循环检测
+	// 	schedule_delayed_work(&firefly->init_work, 1000);
 
     return;
 }
+
 
 static int pca953x_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
@@ -755,6 +794,7 @@ static int pca953x_probe(struct i2c_client *client,
 	struct device_node *node = dev->of_node;
 	struct pca953x_platform_data *pdata;
 	struct pca953x_chip *chip;
+	u32 gpio_start;
 	int irq_base = 0;
 	int ret;
 	u32 invert = 0;
@@ -774,6 +814,9 @@ static int pca953x_probe(struct i2c_client *client,
 		chip->gpio_start = pdata->gpio_base;
 		invert = pdata->invert;
 		chip->names = pdata->names;
+	} else if (!of_property_read_u32(node, "gpio-group-num", &gpio_start)){
+		chip->gpio_start = 500 + gpio_start*16 - 16;
+		irq_base = 0;
 	} else {
 		//进入这里
 		chip->gpio_start = -1;
@@ -804,8 +847,6 @@ static int pca953x_probe(struct i2c_client *client,
 	pca953x_setup_gpio(chip, chip->driver_data & PCA_GPIO_MASK);
 	//pca953x_setup_gpio(chip, 0x0010);
 
-	/*daijh*/
-	//firefly = kzalloc(sizeof(struct check_sub), GFP_KERNEL);
 	firefly = devm_kzalloc(&client->dev,
 				sizeof(struct check_sub), GFP_KERNEL);
 	if (firefly == NULL)
@@ -824,31 +865,25 @@ static int pca953x_probe(struct i2c_client *client,
 		schedule_delayed_work(&firefly->init_work, 5000);
 		goto gpio_reset_init;
 	}
+
 	// sub name
 	of_property_read_string(node, "label", &firefly->name);
 	memset(firefly->sub_en, 0, sizeof(firefly->sub_en));
 	memset(firefly->sub_det, 0, sizeof(firefly->sub_det));
 	sprintf(firefly->sub_det, "%s_det", firefly->name);
 
+	dev_info(firefly->dev,"%s  %s line%d!!!\n", firefly->name, __func__, __LINE__);
+
 	// hotplug gpio
 	firefly->det_gpio = of_get_named_gpio_flags(node, "det-gpio", 0, &flag);
-	if(firefly->det_gpio < 0){
-		dev_info(dev, "Can not read property hp_det_gpio\n");
-		firefly->det_gpio = INVALID_GPIO;
 
-		if (firefly->chip->chip_type == PCA953X_TYPE) {
-			ret = device_pca953x_init(firefly->chip, firefly->invert, firefly);
-		} else {
-			ret = device_pca957x_init(firefly->chip, firefly->invert);
-		}
+	dev_info(firefly->dev,"%s  %s det-gpio %d!!!\n", firefly->name, __func__, firefly->det_gpio);
+	if(firefly->det_gpio > 0){
 
-		if (ret) {
-			dev_info(firefly->dev,"init failed!!!\n");
-			return -ret;
-		}
-		else
-			dev_info(firefly->dev,"%s init successed!!!\n", firefly->name);
-	} else {
+		dev_info(firefly->dev,"%s  %s line%d!!!\n", firefly->name, __func__, __LINE__);
+
+		firefly->det_active_low = flag & OF_GPIO_ACTIVE_LOW;
+
 		ret = gpio_request(firefly->det_gpio, firefly->sub_det);
 		if(ret != 0){
 			gpio_free(firefly->det_gpio);
@@ -856,15 +891,19 @@ static int pca953x_probe(struct i2c_client *client,
 		}
 		// set hotplug fun
 		firefly->det_irq = gpio_to_irq(firefly->det_gpio);
-		ret = request_irq(firefly->det_irq, sub_checkin_handler, IRQ_TYPE_EDGE_BOTH, "firefly_det", (void *)firefly);
+		ret = request_irq(firefly->det_irq, sub_checkin_handler, IRQ_TYPE_EDGE_BOTH | IRQF_SHARED, "firefly_det", (void *)firefly);
 
-		ret = gpio_get_value(firefly->det_gpio);
-		if(ret == 0) {
-			dev_info(dev,"%s:%s is insert when boot!\n", __func__, firefly->name);
+		if(pca583_inserted(firefly))
+		{
+			disable_irq_nosync(firefly->det_irq);
 			schedule_delayed_work(&firefly->init_work, 1000);
-		} else {
-			dev_info(dev,"%s:%s is not insert when boot!\n", __func__, firefly->name);
 		}
+	}
+	else
+	{
+		schedule_delayed_work(&firefly->init_work, 1000);
+		dev_info(dev, "%s: Can not read property hp_det_gpio\n", firefly->name);
+		firefly->det_gpio = INVALID_GPIO;
 	}
 
 gpio_reset_init:
