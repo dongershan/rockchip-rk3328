@@ -378,7 +378,7 @@ static int pwm_regulator_probe(struct platform_device *pdev)
 						    gpio_flags);
 	if (IS_ERR(drvdata->enb_gpio)) {
 		ret = PTR_ERR(drvdata->enb_gpio);
-		dev_err(&pdev->dev, "Failed to get enable GPIO: %d\n", ret);
+		dev_warn(&pdev->dev, "enable GPIO was not set: %d\n", ret);
 		return ret;
 	}
 

@@ -197,6 +197,7 @@
 		/* for rockchip boot on */
 		rockchip,pwm_id= <2>;
 		rockchip,pwm_voltage = <1100000>;
+		pwm-supply = <&vcc5v0_sys>;
 	};
 
 	vcc3v3_pcie: vcc3v3-pcie-regulator {
