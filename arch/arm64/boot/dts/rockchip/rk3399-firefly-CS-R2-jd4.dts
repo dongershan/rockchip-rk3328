@@ -227,6 +227,7 @@
     rk808: pmic@1b {
         /delete-property/ pmic,stby-gpio;
 		/delete-property/ rockchip,system-power-controller;
+		/delete-property/ pmic,hold-gpio;
         pinctrl-names = "default";
         pinctrl-0 = <&pmic_int_l &pmic_dvs2 &pmic_hold>;
 
