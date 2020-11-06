@@ -872,18 +872,12 @@ static int pca953x_probe(struct i2c_client *client,
 	memset(firefly->sub_det, 0, sizeof(firefly->sub_det));
 	sprintf(firefly->sub_det, "%s_det", firefly->name);
 
-	dev_info(firefly->dev,"%s  %s line%d!!!\n", firefly->name, __func__, __LINE__);
-
 	// hotplug gpio
 	firefly->det_gpio = of_get_named_gpio_flags(node, "det-gpio", 0, &flag);
 
-	dev_info(firefly->dev,"%s  %s det-gpio %d!!!\n", firefly->name, __func__, firefly->det_gpio);
+	//dev_info(firefly->dev,"%s  %s det-gpio %d!!!\n", firefly->name, __func__, firefly->det_gpio);
 	if(firefly->det_gpio > 0){
-
-		dev_info(firefly->dev,"%s  %s line%d!!!\n", firefly->name, __func__, __LINE__);
-
 		firefly->det_active_low = flag & OF_GPIO_ACTIVE_LOW;
-
 		ret = gpio_request(firefly->det_gpio, firefly->sub_det);
 		if(ret != 0){
 			gpio_free(firefly->det_gpio);
