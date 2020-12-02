@@ -56,15 +56,26 @@ int switch_gpio;
 
 void enable_wdt(void)
 {
-	gpio_direction_output(switch_gpio, 1);
-	printk("enable pc9202 watchdog\n");
+	if(switch_gpio >=0)
+	{
+		gpio_direction_output(switch_gpio, 1);
+		printk("enable pc9202 watchdog\n");
+	}
+	else
+		printk("switch_gpio not set\n");
+
 	return;
 }
 
 void disable_wdt(void)
 {
-	gpio_direction_output(switch_gpio, 0);
-	printk("disable pc9202 watchdog\n");
+	if(switch_gpio >=0)
+	{
+		gpio_direction_output(switch_gpio, 0);
+		printk("disable pc9202 watchdog\n");
+	}
+	else
+		printk("switch_gpio not set\n");
 	return;
 }
 
@@ -249,32 +260,36 @@ static int pc9202_wdt_probe(struct i2c_client *client,
 
 	if(0 != iReadByte(SW2001_REG_WDT_CTRL, &reg_value))
 	{
-		dev_warn(&client->dev,"====== i2c detect failed watchdog init err==%x=====\r\n", reg_value);
+		printk("====== i2c detect failed watchdog init err==%x=====\r\n", reg_value);
 		goto err;
 	}
 	else
 	{
-		dev_warn(&client->dev,"====== i2c detect success watchdog init========\r\n");
+		printk("====== i2c detect success watchdog init========\r\n");
 	}
 
 	major = register_chrdev(0, "wdt_crl", &wdt_fops);
     if (major < 0)
     {
-		dev_err(&client->dev,"Unable to register wdt character device !\n");
+		printk("Unable to register wdt character device !\n");
 		goto err;
     }
-	// ������
+
 	cls = class_create(THIS_MODULE, "wdt_crl");
-	// �����豸�ڵ�
 	dev = device_create(cls, NULL, MKDEV(major, 0), NULL, "wdt_crl");
 
 	switch_gpio = of_get_named_gpio_flags(client->dev.of_node, "sw-gpio", 0, NULL);
-	if (gpio_request(switch_gpio, "wdt-switch")) {
-		dev_err(&client->dev,"gpio %d request failed!\n", switch_gpio);
-		gpio_free(switch_gpio);
-	} else {
-		gpio_direction_output(switch_gpio, 0);
+	printk("gpio %d request failed!\n", switch_gpio);
+	if (switch_gpio >=0)
+	{
+		if (gpio_request(switch_gpio, "wdt-switch")) {
+			printk("gpio %d request failed!\n", switch_gpio);
+			gpio_free(switch_gpio);
+		} else {
+			gpio_direction_output(switch_gpio, 0);
+		}
 	}
+
 
     return 0;
 err:
@@ -288,9 +303,8 @@ static int pc9202_wdt_remove(struct i2c_client *client)
 {
 	struct sw2001		*axp = i2c_get_clientdata(client);
 
-	//PR_DEBUG("%s\n",__func__);
-
-	gpio_free(switch_gpio);
+	if (switch_gpio >=0)
+		gpio_free(switch_gpio);
 	kfree(axp);
 	i2c_set_clientdata(client, NULL);
 	the_sw2001 = NULL;
