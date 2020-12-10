@@ -100,6 +100,7 @@ struct xc7022 {
 	struct mutex		mutex;
 	bool			streaming;
 	const struct xc7022_mode *cur_mode;
+	struct delayed_work init_work;
 };
 
 static struct xc7022 *xc7022_master;
@@ -1024,40 +1025,18 @@ static void xc7022_detach_master(void *data)
 		xc7022_master = NULL;
 }
 
-static int xc7022_probe(struct i2c_client *client,
-			 const struct i2c_device_id *id)
-{
-	struct device *dev = &client->dev;
-	struct xc7022 *xc7022;
+static void firefly_init_work(struct work_struct *work) {
+	struct xc7022 *xc7022 = container_of(work, struct xc7022, init_work.work);
+	struct i2c_client *client = xc7022->client;
 	struct v4l2_subdev *sd;
+	struct device *dev = &xc7022->client->dev;
 	int ret;
 
-	xc7022 = devm_kzalloc(dev, sizeof(*xc7022), GFP_KERNEL);
-	if (!xc7022)
-		return -ENOMEM;
-
-	xc7022->client = client;
-	xc7022->cur_mode = &supported_modes[0];
-
-	if (!xc7022_master) {
-		xc7022_master = xc7022;
-		devm_add_action(dev, xc7022_detach_master, xc7022);
-	}
 	if (xc7022_master == xc7022) {
-
-		xc7022->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
-		if (IS_ERR(xc7022->reset_gpio)){
-			dev_warn(dev, "Failed to get reset-gpios\n");
-			return -1;
-		} else{
-			gpiod_set_value_cansleep(xc7022->reset_gpio, 1);
-			msleep(4500);
-		}
-
 		ret = xc7022_configure_regulators(dev);
 		if (ret) {
 			dev_err(dev, "Failed to get power regulators\n");
-			return ret;
+			return;
 		}
 
 		xc7022->pinctrl = devm_pinctrl_get(dev);
@@ -1110,7 +1089,7 @@ static int xc7022_probe(struct i2c_client *client,
 	pm_runtime_enable(dev);
 	pm_runtime_idle(dev);
 
-	return 0;
+	return;
 
 err_clean_entity:
 #if defined(CONFIG_MEDIA_CONTROLLER)
@@ -1123,7 +1102,42 @@ err_free_handler:
 err_destroy_mutex:
 	mutex_destroy(&xc7022->mutex);
 
-	return ret;
+	return;
+}
+
+static int xc7022_probe(struct i2c_client *client,
+			 const struct i2c_device_id *id)
+{
+	struct device *dev = &client->dev;
+	struct xc7022 *xc7022;
+
+	xc7022 = devm_kzalloc(dev, sizeof(*xc7022), GFP_KERNEL);
+	if (!xc7022)
+		return -ENOMEM;
+
+	xc7022->client = client;
+	xc7022->cur_mode = &supported_modes[0];
+
+	INIT_DELAYED_WORK(&xc7022->init_work, firefly_init_work);
+
+	if (!xc7022_master) {
+		xc7022_master = xc7022;
+		devm_add_action(dev, xc7022_detach_master, xc7022);
+	}
+	if (xc7022_master == xc7022) {
+
+		xc7022->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
+		if (IS_ERR(xc7022->reset_gpio)){
+			dev_warn(dev, "Failed to get reset-gpios\n");
+			return -1;
+		} else{
+			gpiod_set_value_cansleep(xc7022->reset_gpio, 1);
+			//msleep(4500);
+			schedule_delayed_work(&xc7022->init_work, 3000);
+		}
+	}
+
+	return 0;
 }
 
 static int xc7022_remove(struct i2c_client *client)
