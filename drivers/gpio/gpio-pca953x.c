@@ -632,7 +632,6 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct che
 	int ret;
 	u8 val[MAX_BANK];
 	int offset=0;
-	u8 reg_val;
 
 	//dev_info(firefly->dev,"device_pca953x_init!!!\n");
 
@@ -670,34 +669,36 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct che
 	//----------------------------firefly: Raise external gpio by default ------------------------------------
 
 	if (chip->chip_type == PCA953X_TYPE) {
-		reg_val = 0x00;
+		val[0] = 0xff;
+		val[1] = 0xff;
 		offset = PCA953X_OUTPUT;
 
-		ret = pca953x_write_regs(chip, offset, 0xff);
+		ret = pca953x_write_regs(chip, offset, val);
 		if (ret < 0)
-			goto exit;
+			goto out;
 
-		ret = pca953x_write_regs(chip, offset + 1, 0xff);
+		ret = pca953x_write_regs(chip, offset + 1, val);
 		if (ret < 0)
-			goto exit;
+			goto out;
 
 		chip->reg_output[0] = 0xff;			//更新一下内部的reg_val
 		chip->reg_output[1] = 0xff;			//更新一下内部的reg_val
 
 		/* ---------- then direction ----------*/
-		reg_val = 0x00;
+		val[0] = 0x00;
+		val[1] = 0x00;
 		offset = PCA953X_DIRECTION;
 
-		ret = pca953x_write_regs(chip, offset, reg_val);
+		ret = pca953x_write_regs(chip, offset, val);
 		if (ret < 0)
-			goto exit;
+			goto out;
 
-		ret = pca953x_write_regs(chip, offset + 1, reg_val);
+		ret = pca953x_write_regs(chip, offset + 1, val);
 		if (ret < 0)
-			goto exit;
+			goto out;
 
-		chip->reg_direction[0] = reg_val;			//更新一下内部的reg_val
-		chip->reg_direction[1] = reg_val;			//更新一下内部的reg_val
+		chip->reg_direction[0] = 0x00;			//更新一下内部的reg_val
+		chip->reg_direction[1] = 0x00;			//更新一下内部的reg_val
 
 		ret = 0;
 	}
