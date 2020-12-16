@@ -124,19 +124,6 @@
 		io-channels = <&saradc 3>;
 	};
 
-	HUB20_PWR_EN: HUB20-PWR-EN {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		regulator-always-on;
-		regulator-boot-on;
-		gpio = <&gpio0 8 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&hub20_pwr_en>;
-		regulator-name = "vcc5v0_hub20";
-		status = "okay";
-	};
-
-
 	WDPW_PWR_EN: WDPW-PWR-EN {
 		compatible = "regulator-fixed";
 		enable-active-high;
@@ -151,6 +138,13 @@
 
 	leds {
 		compatible = "gpio-leds";
+
+		HUB20_PWR_EN {
+			//BMC LED
+			gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;	//GPIO0_B0
+			default-state = "on";
+		};
+
 		BMC_LED {
 			//BMC LED
 			gpios = <&gpio4 22 GPIO_ACTIVE_HIGH>;	//GPIO4_C6  PWM1  32*4 + 22 = 128 + 22 = 150
