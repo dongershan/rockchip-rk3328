@@ -248,6 +248,15 @@
 		label = "sub3";
 	};
 
+	pca9555_1_2: i2c1gpio@27 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x22>;
+		gpio-controller;
+		gpio-group-num = <10>;
+		label = "sub3_other";
+	};
+
 	hym8563: hym8563@51 {
 		compatible = "haoyu,hym8563";
 		reg = <0x51>;
@@ -306,6 +315,24 @@
 		det-gpio = <&gpio3 31 GPIO_ACTIVE_LOW>;		//GPIO3_D7_D_5V
 		label = "sub9";
 	};
+
+	pca9555_2_3: i2c2gpio@26 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x26>;
+		gpio-controller;
+		gpio-group-num = <11>;
+		label = "sub6_other";
+	};
+
+	pca9555_2_4: i2c2gpio@22 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x22>;
+		gpio-controller;
+		gpio-group-num = <12>;
+		label = "sub9_other";
+	};
 };
 
 
@@ -333,6 +360,24 @@
 		gpio-group-num = <5>;
 		det-gpio = <&gpio3 26 GPIO_ACTIVE_LOW>;		//GPIO3_D2_D_5V
     };
+
+	pca9555_4_3: i2c4gpio@26 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x26>;
+		gpio-controller;
+		gpio-group-num = <13>;
+		label = "sub2_other";
+	};
+
+	pca9555_4_4: i2c4gpio@22 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x22>;
+		gpio-controller;
+		gpio-group-num = <14>;
+		label = "sub5_other";
+	};
 };
 
 &i2c7 {
@@ -358,6 +403,24 @@
 		det-gpio = <&gpio2 3 GPIO_ACTIVE_LOW>;		//GPIO2_A3_D_5V
 		label = "sub1";
 	};
+
+	pca9555_7_3: i2c7gpio@26 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x26>;
+		gpio-controller;
+		gpio-group-num = <15>;
+		label = "sub8_other";
+	};
+
+	pca9555_7_4: i2c7gpio@22 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x22>;
+		gpio-controller;
+		gpio-group-num = <16>;
+		label = "sub1_other";
+	};
 };
 
 &i2c6 {
@@ -382,6 +445,24 @@
 		gpio-group-num = <9>;
 		det-gpio = <&gpio1 2 GPIO_ACTIVE_LOW>;		//GPIO1_A2_D_5V
 		label = "sub7";
+	};
+
+	pca9555_6_3: i2c6gpio@26 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x26>;
+		gpio-controller;
+		gpio-group-num = <17>;
+		label = "sub4_other";
+	};
+
+	pca9555_6_4: i2c6gpio@22 {
+		compatible = "nxp,pca9555";
+		status = "okay";
+		reg = <0x22>;
+		gpio-controller;
+		gpio-group-num = <18>;
+		label = "sub7_other";
 	};
 };
 
