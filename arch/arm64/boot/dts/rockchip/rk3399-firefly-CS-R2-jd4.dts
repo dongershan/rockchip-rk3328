@@ -237,7 +237,7 @@
 	clock-frequency = <100000>;
 	status = "okay";
 
-	pca9555_1_1: i2c1gpio@27 {
+	pca9555_1_1: i2c1gpio@23 {
 		compatible = "nxp,pca9555";
 		status = "okay";
 		reg = <0x23>;
@@ -248,7 +248,7 @@
 		label = "sub3";
 	};
 
-	pca9555_1_2: i2c1gpio@27 {
+	pca9555_1_2: i2c1gpio@22 {
 		compatible = "nxp,pca9555";
 		status = "okay";
 		reg = <0x22>;

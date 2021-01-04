@@ -631,7 +631,6 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct che
 {
 	int ret;
 	u8 val[MAX_BANK];
-	int offset=0;
 
 	//dev_info(firefly->dev,"device_pca953x_init!!!\n");
 
@@ -663,45 +662,6 @@ static int device_pca953x_init(struct pca953x_chip *chip, u32 invert, struct che
         chip->reg_output[0] = chip->reg_output[0] | 0x80;
         ret = pca953x_write_regs(chip, PCA953X_OUTPUT, chip->reg_output);
     }
-
-
-
-	//----------------------------firefly: Raise external gpio by default ------------------------------------
-
-	if (chip->chip_type == PCA953X_TYPE) {
-		val[0] = 0xff;
-		val[1] = 0xff;
-		offset = PCA953X_OUTPUT;
-
-		ret = pca953x_write_regs(chip, offset, val);
-		if (ret < 0)
-			goto out;
-
-		ret = pca953x_write_regs(chip, offset + 1, val);
-		if (ret < 0)
-			goto out;
-
-		chip->reg_output[0] = 0xff;			//更新一下内部的reg_val
-		chip->reg_output[1] = 0xff;			//更新一下内部的reg_val
-
-		/* ---------- then direction ----------*/
-		val[0] = 0x00;
-		val[1] = 0x00;
-		offset = PCA953X_DIRECTION;
-
-		ret = pca953x_write_regs(chip, offset, val);
-		if (ret < 0)
-			goto out;
-
-		ret = pca953x_write_regs(chip, offset + 1, val);
-		if (ret < 0)
-			goto out;
-
-		chip->reg_direction[0] = 0x00;			//更新一下内部的reg_val
-		chip->reg_direction[1] = 0x00;			//更新一下内部的reg_val
-
-		ret = 0;
-	}
 out:
 	return ret;
 }
@@ -774,12 +734,12 @@ static void firefly_init_work(struct work_struct *work) {
     struct check_sub *firefly = container_of(work, struct check_sub, init_work.work);
     int ret = 0;
 
-	dev_info(firefly->dev,"----------%s start--------------\n", __func__);
+	//dev_info(firefly->dev,"----------%s start--------------\n", __func__);
 
 	//mdelay(1000);
 	//msleep(100);
 
-	if(pca583_inserted(firefly))
+	if((firefly->det_gpio < 0) || pca583_inserted(firefly))
 	{
 		//  while(1)
 		//  {
@@ -799,7 +759,7 @@ static void firefly_init_work(struct work_struct *work) {
 		// 	msleep(800);
 		//  }
 
-		if(firefly->det_gpio)
+		if(firefly->det_gpio > 0)
 			enable_irq(firefly->det_irq);
 		else if (ret)		//如果没有det-gpio和初始化失败，就循环检测
 			schedule_delayed_work(&firefly->init_work, 1000);
