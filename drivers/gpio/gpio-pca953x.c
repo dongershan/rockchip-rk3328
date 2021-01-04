@@ -753,7 +753,7 @@ static void firefly_init_work(struct work_struct *work) {
 				dev_info(firefly->dev,"【%s】 init 【failed】!!!\n", firefly->name);
 			else
 			{
-				dev_info(firefly->dev,"【%s】 init 【successed】!!! \n", firefly->name);
+				dev_info(firefly->dev,"【%s】 init 【successed】 gpio-base: %d !!! \n", firefly->name, firefly->chip->gpio_start);
 				//break;
 			}
 		// 	msleep(800);

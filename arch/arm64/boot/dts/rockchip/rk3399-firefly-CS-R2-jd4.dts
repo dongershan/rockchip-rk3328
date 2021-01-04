@@ -257,6 +257,15 @@
 		label = "sub3_other";
 	};
 
+	pca9554_1_1: i2c1gpio@20 {
+		compatible = "nxp,pca9554";
+		status = "okay";
+		reg = <0x20>;
+		gpio-controller;
+		gpio-group-num = <19>;
+		label = "sub_9554";
+	};
+
 	hym8563: hym8563@51 {
 		compatible = "haoyu,hym8563";
 		reg = <0x51>;
