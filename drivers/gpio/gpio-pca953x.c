@@ -705,10 +705,10 @@ int pca583_inserted(struct check_sub * firefly)
 	firefly->det_state = (firefly->det_state ? 0 : 1) ^ firefly->det_active_low;
 
 	if(firefly->det_state) {
-		dev_info(firefly->dev,"【%s】: has been 【out】 !\n", firefly->name);
+		dev_info(firefly->dev,"【%s】\thas been 【out】 !\n", firefly->name);
 		return 0;
 	} else {
-		dev_info(firefly->dev,"【%s】: has been 【in】 !\n", firefly->name);
+		dev_info(firefly->dev,"【%s】\thas been 【in】 !\n", firefly->name);
 		return 1;
 	}
 }
@@ -750,10 +750,13 @@ static void firefly_init_work(struct work_struct *work) {
 			}
 
 			if(ret)
-				dev_info(firefly->dev,"【%s】 init 【failed】!!!\n", firefly->name);
+			{
+				if(firefly->det_gpio > 0)
+					dev_info(firefly->dev,"【%s】\tinit 【failed】!!!\n", firefly->name);
+			}
 			else
 			{
-				dev_info(firefly->dev,"【%s】 init 【successed】 gpio-base: %d !!! \n", firefly->name, firefly->chip->gpio_start);
+				dev_info(firefly->dev,"【%s】\tinit 【successed】 gpio-base: %d !!! \n", firefly->name, firefly->chip->gpio_start);
 				//break;
 			}
 		// 	msleep(800);
@@ -815,7 +818,7 @@ static int pca953x_probe(struct i2c_client *client,
 		invert = pdata->invert;
 		chip->names = pdata->names;
 	} else if (!of_property_read_u32(node, "gpio-group-num", &gpio_start)){
-		chip->gpio_start = 500 + gpio_start*16 - 16;
+		chip->gpio_start = 300 + gpio_start*16 - 16;
 		irq_base = 0;
 	} else {
 		//进入这里
@@ -896,7 +899,7 @@ static int pca953x_probe(struct i2c_client *client,
 	else
 	{
 		schedule_delayed_work(&firefly->init_work, 1000);
-		dev_info(dev, "%s: Can not read property hp_det_gpio\n", firefly->name);
+		dev_info(dev, "【%s】\tCan not read property hp_det_gpio\n", firefly->name);
 		firefly->det_gpio = INVALID_GPIO;
 	}
 
