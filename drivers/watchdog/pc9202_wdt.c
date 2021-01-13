@@ -98,7 +98,7 @@ int sw2001_write(unsigned char reg, unsigned char *buf, int len)
 
 	mutex_unlock(&the_sw2001->lock);
 
-	printk("%s: sw2001_write(0x%x,0x%x)\n", "pc9202", reg, *buf);
+	//printk("%s: sw2001_write(0x%x,0x%x)\n", "pc9202", reg, *buf);
 
 	if(status)
 		printk("error.. status=0x%x\n",status);
