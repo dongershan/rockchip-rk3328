@@ -388,12 +388,6 @@ static int rkisp1_create_links(struct rkisp1_device *dev)
 	unsigned int flags, s, pad;
 	int ret;
 
-	if (dev->num_sensors <= 0) {
-		dev_err(dev->dev,
-			"failed to find sensors: %d \n", dev->num_sensors);
-		return -ENXIO;
-	}
-
 	/* sensor links(or mipi-phy) */
 	for (s = 0; s < dev->num_sensors; ++s) {
 		struct rkisp1_sensor_info *sensor = &dev->sensors[s];
@@ -560,7 +554,6 @@ static int _set_pipeline_default_fmt(struct rkisp1_device *dev)
 static int subdev_notifier_complete(struct v4l2_async_notifier *notifier)
 {
 	struct rkisp1_device *dev;
-	struct platform_device *pdev;
 	int ret;
 
 	dev = container_of(notifier, struct rkisp1_device, notifier);
@@ -568,31 +561,25 @@ static int subdev_notifier_complete(struct v4l2_async_notifier *notifier)
 	mutex_lock(&dev->media_dev.graph_mutex);
 	ret = rkisp1_create_links(dev);
 	if (ret < 0)
-		goto err_subdev;
+		goto unlock;
 	ret = v4l2_device_register_subdev_nodes(&dev->v4l2_dev);
 	if (ret < 0)
-		goto err_subdev;
+		goto unlock;
 
 	ret = rkisp1_update_sensor_info(dev);
 	if (ret < 0) {
 		v4l2_err(&dev->v4l2_dev, "update sensor failed\n");
-		goto err_subdev;
+		goto unlock;
 	}
 
 	ret = _set_pipeline_default_fmt(dev);
 	if (ret < 0)
-		goto err_subdev;
+		goto unlock;
 
 	v4l2_info(&dev->v4l2_dev, "Async subdev notifier completed\n");
-	mutex_unlock(&dev->media_dev.graph_mutex);
-	return ret;
 
-err_subdev:
+unlock:
 	mutex_unlock(&dev->media_dev.graph_mutex);
-
-	v4l2_err(&dev->v4l2_dev, "subdev link fail, remove isp device\n");
-	pdev = to_platform_device(dev->dev);
-	platform_device_unregister(pdev);
 	return ret;
 }
 
@@ -1310,7 +1297,6 @@ static int rkisp1_plat_remove(struct platform_device *pdev)
 	media_device_unregister(&isp_dev->media_dev);
 	v4l2_device_unregister(&isp_dev->v4l2_dev);
 	rkisp1_unregister_params_vdev(&isp_dev->params_vdev);
-	rkisp1_unregister_dmarx_vdev(isp_dev);
 	rkisp1_unregister_stats_vdev(&isp_dev->stats_vdev);
 	rkisp1_unregister_stream_vdevs(isp_dev);
 	rkisp1_unregister_isp_subdev(isp_dev);
