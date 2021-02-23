@@ -7,7 +7,7 @@
 #define PCA955_I2C_CLK 100000
 
 / {
-	model = "CS2-AIO-3399JD4-SERVER Board (Linux Opensource)";
+	model = "CS-R2-3399JD4-MAIN Board (Linux Opensource)";
 	compatible = "rockchip,rk3399-firefly", "rockchip,rk3399";
 
 	/delete-property/ rt5640-sound;

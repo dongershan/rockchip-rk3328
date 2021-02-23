@@ -4,16 +4,16 @@
 #include <dt-bindings/sensor-dev.h>
 
 / {
-	model = "SR-JD4-MAIN Board (Linux Opensource)";
+	model = "CS-R1-3399JD4-MAIN Board (Linux Opensource)";
 	compatible = "rockchip,rk3399-firefly", "rockchip,rk3399";
-	
+
 	/delete-node/ gpio-keys;
 	/delete-node/ wireless-wlan;
 	/delete-node/ wireless-bluetooth;
 	test-power {
 		status = "okay";
 	};
-       
+
 	adb-select {
 		status = "okay";
 		compatible = "firefly,adb-select";
@@ -34,29 +34,27 @@
 
 	 };
 
-       	wdt_pwr: wdt-pwr {
-                compatible = "regulator-fixed";
-                enable-active-high;
-                gpio = <&gpio1 11 GPIO_ACTIVE_HIGH>;
-                pinctrl-names = "default";
-                pinctrl-0 = <&wdt_pwr_pin>;
-                regulator-name = "wdt_pwr";
-                regulator-always-on;
-                status = "okay";
+	wdt_pwr: wdt-pwr {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wdt_pwr_pin>;
+		regulator-name = "wdt_pwr";
+		regulator-always-on;
+		status = "okay";
+	};
 
-        };
-
-      	usb_net: usb-net {
-             compatible = "regulator-fixed";
-             enable-active-high;
-             gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
-             pinctrl-names = "default";
-             pinctrl-0 = <&usb_net_ctl>;
-             regulator-name = "usb_net";
-             regulator-always-on;
-             status = "okay";
-
-     };
+	usb_net: usb-net {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb_net_ctl>;
+		regulator-name = "usb_net";
+		regulator-always-on;
+		status = "okay";
+	};
 
 };
 
@@ -87,10 +85,12 @@
 /* rtc */
 &rk808{
 	/delete-property/ pmic,stby-gpio;
+	/delete-property/ rockchip,system-power-controller;
+	/delete-property/ pmic,hold-gpio;
 	pinctrl-0 = <&pmic_int_l &pmic_dvs2 &pmic_hold>;
 	rtc {
 		status = "disabled";
-	};	
+	};
 };
 
 //pcie0 reset port
@@ -98,6 +98,9 @@
 	ep-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
 };
 
+&i2c4 {
+	status = "disabled";
+};
 
 &i2c1 {
 	status = "okay";
@@ -315,7 +318,7 @@
 			rockchip,pins = <RK_GPIO1 1 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
-	
+
 	wdt-pin {
        		wdt_pwr_pin: wdt-pwr-pin {
                        rockchip,pins = <RK_GPIO1 11 RK_FUNC_GPIO &pcfg_pull_up>;

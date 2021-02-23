@@ -4,7 +4,7 @@
 #include <dt-bindings/sensor-dev.h>
 
 / {
-	model = "SR-JD4-SUB Board (Linux Opensource)";
+	model = "CS-R1-3399JD4-SUB Board (Linux Opensource)";
 	compatible = "rockchip,rk3399-firefly", "rockchip,rk3399";
 
 	/delete-node/ gpio-keys;
@@ -99,7 +99,7 @@
 		 compatible = "jedec,spi-nor";
 		 reg = <0x00>;
 		 spi-max-frequency = <48000000>;
-	 };  
+	 };
 };
 
 &i2c1 {
