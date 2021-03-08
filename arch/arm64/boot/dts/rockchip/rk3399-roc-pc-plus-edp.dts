@@ -57,6 +57,16 @@
             };
         };
     };
+
+	leds {
+		compatible = "gpio-leds";
+
+		FAN_EN {
+			//fan power
+			gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;	//GPIO1_A1
+			default-state = "on";
+		};
+	};
 };
 
 /*这里注释拉enable引脚，因为eDP和mipi共用拉，enable引脚。又因为

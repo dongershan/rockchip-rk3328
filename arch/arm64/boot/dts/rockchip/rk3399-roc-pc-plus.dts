@@ -22,14 +22,14 @@
 	};
 	/delete-node/ vcc_hub_en-regulator;
 
-	fan_enable: fan-regulator {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		gpio = <&gpio1 1 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&fan_pin>;
-		regulator-name = "fan_enable";
-		regulator-always-on;
+	leds {
+		compatible = "gpio-leds";
+
+		FAN_EN {
+			//fan power
+			gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;	//GPIO1_A1
+			default-state = "on";
+		};
 	};
 };
 
@@ -141,12 +141,6 @@
                 };
 	};
 
-	fan {
-		fan_pin: fan-pin {
-			rockchip,pins =
-				<1 1 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
 };
 
 /*
