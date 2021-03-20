@@ -901,7 +901,7 @@
 			rockchip,pins =
 				<1 18 RK_FUNC_GPIO &pcfg_pull_down>;
 		};
-		
+
 	};
 
 	sdio-pwrseq {
@@ -945,13 +945,13 @@
 			rockchip,pins = <1 13 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
-	
+
 	vcc5v0_sys {
 		vcc_5v0_h: vcc-5v0-h {
 			rockchip,pins = <2 6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-	
+
 	vcc_sd {
 		vcc_sd_h: vcc-sd-h {
 			rockchip,pins = <4 30 RK_FUNC_GPIO &pcfg_pull_none>;
@@ -968,7 +968,7 @@
 			rockchip,pins = <1 17 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-	
+
 	buttons {
 		pwrbtn: pwrbtn {
 			rockchip,pins = <0 5 RK_FUNC_GPIO &pcfg_pull_up>;
@@ -1067,10 +1067,6 @@
 };
 
 &dp_in_vopb {
-	status = "okay";
-};
-
-&dp_in_vopl {
 	status = "disabled";
 };
 
