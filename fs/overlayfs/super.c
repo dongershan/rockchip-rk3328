@@ -45,6 +45,8 @@ struct ovl_fs {
 	struct ovl_config config;
 	/* creds of process who forced instantiation of super block */
 	const struct cred *creator_cred;
+	/* sb common to all layers */
+	struct super_block *same_sb;
 };
 
 struct ovl_dir_cache;
@@ -83,6 +85,9 @@ enum ovl_path_type ovl_path_type(struct dentry *dentry)
 		 * Non-dir dentry can hold lower dentry from previous
 		 * location. Its purity depends only on opaque flag.
 		 */
+		if (oe->numlower)
+			type |= __OVL_PATH_ORIGIN;
+
 		if (oe->numlower && S_ISDIR(dentry->d_inode->i_mode))
 			type |= __OVL_PATH_MERGE;
 		else if (!oe->opaque)
@@ -404,6 +409,13 @@ static bool ovl_dentry_weird(struct dentry *dentry)
 				  DCACHE_MANAGE_TRANSIT |
 				  DCACHE_OP_HASH |
 				  DCACHE_OP_COMPARE);
+}
+
+struct super_block *ovl_same_sb(struct super_block *sb)
+{
+       struct ovl_fs *ofs = sb->s_fs_info;
+
+       return ofs->same_sb;
 }
 
 static inline struct dentry *ovl_lookup_real(struct dentry *dir,
@@ -1136,11 +1148,19 @@ static int ovl_fill_super(struct super_block *sb, void *data, int silent)
 
 		ufs->lower_mnt[ufs->numlower] = mnt;
 		ufs->numlower++;
+
+	   /* Check if all lower layers are on same sb */
+		if (i == 0)
+			ufs->same_sb = mnt->mnt_sb;
+		else if (ufs->same_sb != mnt->mnt_sb)
+			ufs->same_sb = NULL;
 	}
 
 	/* If the upper fs is nonexistent, we mark overlayfs r/o too */
 	if (!ufs->upper_mnt)
 		sb->s_flags |= MS_RDONLY;
+	else if (ufs->upper_mnt->mnt_sb != ufs->same_sb)
+		ufs->same_sb = NULL;
 
 	if (remote)
 		sb->s_d_op = &ovl_reval_dentry_operations;

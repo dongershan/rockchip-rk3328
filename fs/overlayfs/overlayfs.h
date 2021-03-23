@@ -15,10 +15,12 @@ enum ovl_path_type {
 	__OVL_PATH_PURE		= (1 << 0),
 	__OVL_PATH_UPPER	= (1 << 1),
 	__OVL_PATH_MERGE	= (1 << 2),
+	__OVL_PATH_ORIGIN	= (1 << 3),
 };
 
 #define OVL_TYPE_UPPER(type)	((type) & __OVL_PATH_UPPER)
 #define OVL_TYPE_MERGE(type)	((type) & __OVL_PATH_MERGE)
+#define OVL_TYPE_ORIGIN(type)	((type) & __OVL_PATH_ORIGIN)
 #define OVL_TYPE_PURE_UPPER(type) ((type) & __OVL_PATH_PURE)
 #define OVL_TYPE_MERGE_OR_LOWER(type) \
 	(OVL_TYPE_MERGE(type) || !OVL_TYPE_UPPER(type))
@@ -151,6 +153,7 @@ bool ovl_dentry_is_opaque(struct dentry *dentry);
 void ovl_dentry_set_opaque(struct dentry *dentry, bool opaque);
 bool ovl_is_whiteout(struct dentry *dentry);
 const struct cred *ovl_override_creds(struct super_block *sb);
+struct super_block *ovl_same_sb(struct super_block *sb);
 void ovl_revert_creds(const struct cred *oldcred);
 void ovl_dentry_update(struct dentry *dentry, struct dentry *upperdentry);
 struct dentry *ovl_lookup(struct inode *dir, struct dentry *dentry,
