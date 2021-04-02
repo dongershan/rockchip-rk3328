@@ -56,6 +56,112 @@
 		status = "okay";
 	};
 
+	leds {
+		compatible = "gpio-leds";
+
+		SPI_FLASH_PWR1 {
+			gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR1 GPIO4_A3	128+3		=131
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR2 {
+			gpios = <&gpio4 4 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR2 GPIO4_A4	128+4		=132
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR3 {
+			gpios = <&gpio4 5 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR3 GPIO4_A5	128+5		=133
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR4 {
+			gpios = <&gpio4 6 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR4 GPIO4_A6	128+6		=134
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR5 {
+			gpios = <&gpio4 7 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR5 GPIO4_A7	128+7		=135
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR6 {
+			gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR6 GPIO0_B1	0+8+1		=9
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR7 {
+			gpios = <&gpio2 28 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR7 GPIO2_D4	64+24+4		=92
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR8 {
+			gpios = <&gpio4 28 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR8 GPIO4_D4	128+24+4	=156
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR9 {
+			gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR9 GPIO0_B4	0+8+4		=12
+			default-state = "off";
+		};
+
+		SPI_FLASH_PWR10 {
+			gpios = <&gpio1 22 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR10 GPIO1_C6	32+16+6		=54
+			default-state = "off";
+		};
+
+		//子板的Recovery 按键
+
+		RECOVER_IN1 {
+			gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;	//RECOVER_IN1		GPIO2_A1	64+1		=65
+			default-state = "on";
+		};
+
+		RECOVER_IN2 {
+			gpios = <&gpio2 26 GPIO_ACTIVE_HIGH>;	//RECOVER_IN2		GPIO2_D2	64+24+2		=90
+			default-state = "on";
+		};
+
+		RECOVER_IN3 {
+			gpios = <&gpio2 8 GPIO_ACTIVE_HIGH>;	//RECOVER_IN3		GPIO2_B0	64+8		=72
+			default-state = "on";
+		};
+
+		RECOVER_IN4 {
+			gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;	//RECOVER_IN4		GPIO2_A0	64+0		=64
+			default-state = "on";
+		};
+
+		RECOVER_IN5 {
+			gpios = <&gpio2 18 GPIO_ACTIVE_HIGH>;	//RECOVER_IN5		GPIO2_C2	64+18		=82
+			default-state = "on";
+		};
+
+		RECOVER_IN6 {
+			gpios = <&gpio4 9 GPIO_ACTIVE_HIGH>;	//RECOVER_IN6		GPIO4_B1	128+8+1		=137
+			default-state = "on";
+		};
+
+		RECOVER_IN7 {
+			gpios = <&gpio2 19 GPIO_ACTIVE_HIGH>;	//RECOVER_IN7		GPIO2_C3	64+16+3		=83
+			default-state = "on";
+		};
+
+		RECOVER_IN8 {
+			gpios = <&gpio4 24 GPIO_ACTIVE_HIGH>;	//RECOVER_IN8		GPIO4_D0	128+24+0	=152
+			default-state = "on";
+		};
+
+		RECOVER_IN9 {
+			gpios = <&gpio2 7 GPIO_ACTIVE_HIGH>;	//RECOVER_IN9		GPIO2_A7	64+7		=71
+			default-state = "on";
+		};
+
+		RECOVER_IN10 {
+			gpios = <&gpio4 8 GPIO_ACTIVE_HIGH>;	//RECOVER_IN10	GPIO4_B0	128+8		=136
+			default-state = "on";
+		};
+	};
+
 };
 
 &pwm3 {
