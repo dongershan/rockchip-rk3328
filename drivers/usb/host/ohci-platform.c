@@ -111,6 +111,35 @@ static struct usb_ohci_pdata ohci_platform_defaults = {
 	.power_off =		ohci_platform_power_off,
 };
 
+static void rockchip_ohci_died_delay_work(struct work_struct *work)
+{
+	struct ohci_hcd *ohci =
+		container_of(work, struct ohci_hcd, died_delay_work.work);
+	struct usb_hcd *hcd = ohci_to_hcd(ohci);
+	int irq, err;
+
+	if (ohci->rh_state != OHCI_RH_HALTED)
+		return ;
+
+	dev_info(hcd->self.controller,
+			"%s: enter restart ohci process.\n", __func__);
+	/*
+		* note: record irq,
+		* Because after usb_remove_hcd, hcd->irq is cleared,
+		* resulting in failure to register ohci interrupt.
+		*/
+	irq = hcd->irq;
+
+	/* remove usb hcd */
+	usb_remove_hcd(hcd);
+
+	/* register usb hcd */
+	err = usb_add_hcd(hcd, irq, IRQF_SHARED);
+	if (err)
+		dev_err(hcd->self.controller,
+			"%s: register usb hcd fail(%d).\n", __func__, err);
+}
+
 static int ohci_platform_probe(struct platform_device *dev)
 {
 	struct usb_hcd *hcd;
@@ -261,6 +290,9 @@ static int ohci_platform_probe(struct platform_device *dev)
 	if (err)
 		goto err_power;
 
+	/* init delay work */
+	INIT_DELAYED_WORK(&ohci->died_delay_work, rockchip_ohci_died_delay_work);
+
 	device_wakeup_enable(hcd->self.controller);
 
 	platform_set_drvdata(dev, hcd);
@@ -292,8 +324,10 @@ static int ohci_platform_remove(struct platform_device *dev)
 	struct usb_hcd *hcd = platform_get_drvdata(dev);
 	struct usb_ohci_pdata *pdata = dev_get_platdata(&dev->dev);
 	struct ohci_platform_priv *priv = hcd_to_ohci_priv(hcd);
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
 	int clk;
 
+	cancel_delayed_work_sync(&ohci->died_delay_work);
 	usb_remove_hcd(hcd);
 
 	if (pdata->power_off)
@@ -323,8 +357,11 @@ static int ohci_platform_suspend(struct device *dev)
 	struct usb_ohci_pdata *pdata = dev->platform_data;
 	struct platform_device *pdev =
 		container_of(dev, struct platform_device, dev);
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
 	bool do_wakeup = device_may_wakeup(dev);
 	int ret;
+
+	cancel_delayed_work_sync(&ohci->died_delay_work);
 
 	ret = ohci_suspend(hcd, do_wakeup);
 	if (ret)

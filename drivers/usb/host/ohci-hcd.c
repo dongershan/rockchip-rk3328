@@ -701,7 +701,7 @@ int ohci_setup(struct usb_hcd *hcd)
 	struct ohci_hcd		*ohci = hcd_to_ohci(hcd);
 
 	ohci_hcd_init(ohci);
-	
+
 	return ohci_init(ohci);
 }
 EXPORT_SYMBOL_GPL(ohci_setup);
@@ -760,6 +760,10 @@ static void io_watchdog_func(unsigned long _ohci)
 			usb_hc_died(ohci_to_hcd(ohci));
 			ohci_dump(ohci);
 			_ohci_shutdown(ohci_to_hcd(ohci));
+
+			schedule_delayed_work(&ohci->died_delay_work,
+						msecs_to_jiffies(10));
+
 			goto done;
 		} else {
 			/* No write back because the done queue was empty */

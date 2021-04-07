@@ -428,6 +428,9 @@ struct ohci_hcd {
 
 	struct work_struct	nec_work;	/* Worker for NEC quirk */
 
+	/* delay work, restart ohci */
+	struct delayed_work     died_delay_work;
+
 	struct dentry		*debug_dir;
 	struct dentry		*debug_async;
 	struct dentry		*debug_periodic;
