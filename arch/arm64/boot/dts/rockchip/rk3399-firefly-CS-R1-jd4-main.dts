@@ -60,17 +60,17 @@
 		compatible = "gpio-leds";
 
 		SPI_FLASH_PWR1 {
-			gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR1 GPIO4_A3	128+3		=131
+			gpios = <&gpio4 4 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR1 GPIO4_A4	128+4		=132
 			default-state = "off";
 		};
 
 		SPI_FLASH_PWR2 {
-			gpios = <&gpio4 4 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR2 GPIO4_A4	128+4		=132
+			gpios = <&gpio4 5 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR2 GPIO4_A5	128+5		=133
 			default-state = "off";
 		};
 
 		SPI_FLASH_PWR3 {
-			gpios = <&gpio4 5 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR3 GPIO4_A5	128+5		=133
+			gpios = <&gpio4 22 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR3 GPIO4_C6	128+16+6		=150
 			default-state = "off";
 		};
 
@@ -85,12 +85,12 @@
 		};
 
 		SPI_FLASH_PWR6 {
-			gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR6 GPIO0_B1	0+8+1		=9
+			gpios = <&gpio2 28 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR6 GPIO2_D4	64+24+4		=92
 			default-state = "off";
 		};
 
 		SPI_FLASH_PWR7 {
-			gpios = <&gpio2 28 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR7 GPIO2_D4	64+24+4		=92
+			gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR7 GPIO4_A3	128+3		=131
 			default-state = "off";
 		};
 
