@@ -180,6 +180,10 @@
 	status = "disabled";
 };
 
+&i2s1 {
+	status = "disabled";
+};
+
 &sdmmc {
 	status = "disabled";
 };
