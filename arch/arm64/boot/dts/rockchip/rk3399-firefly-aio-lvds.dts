@@ -210,6 +210,11 @@
 	};
 };
 
+&gmac {
+	tx_delay = <0x31>;
+	rx_delay = <0x24>;
+};
+
 &route_dsi {
 	status = "okay";
 	logo,mode = "center";

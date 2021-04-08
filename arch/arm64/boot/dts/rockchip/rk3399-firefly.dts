@@ -53,6 +53,11 @@
 	};
 };
 
+&gmac {
+	tx_delay = <0x28>;
+	rx_delay = <0x1B>;
+};
+
 &dp_sound {
 	status = "okay";
 };
@@ -129,7 +134,7 @@
 };
 
 &pinctrl {
-	
+
 	cam0 {
                 cif_pwr: cif-pwr {
                         rockchip,pins = <1 22 RK_FUNC_GPIO &pcfg_pull_down>;
