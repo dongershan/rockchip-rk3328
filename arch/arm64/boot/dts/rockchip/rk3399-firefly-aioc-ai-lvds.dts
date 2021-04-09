@@ -38,33 +38,12 @@
 
 /dts-v1/;
 
-#include "rk3399-firefly-port.dtsi"
-#include <dt-bindings/sensor-dev.h>
+#include "rk3399-firefly-aioc.dtsi"
 #include <dt-bindings/display/media-bus-format.h>
 
 / {
 	model = "AIO-3399C-AI Board LVDS HSX101H40C (Linux Opensource)";
 	compatible = "rockchip,rk3399-firefly", "rockchip,rk3399";
-
-	test-power {
-		status = "okay";
-	};
-
-	/delete-node/ vcc-sd;
-	sdmmc_pwrseq: sdmmc-pwrseq {
-		compatible = "mmc-pwrseq-simple";
-		clocks = <&rk808 1>;
-		clock-names = "ext_clock";
-		pinctrl-names = "default";
-		pinctrl-0 = <&sdcard_enable_h>;
-		/*
-		* On the module itself this is one of these (depending
-		* on the actual card populated):
-		* - SDIO_RESET_L_WL_REG_ON
-		* - PDN (power down when low)
-		*/
-		reset-gpios = <&gpio4 30 GPIO_ACTIVE_LOW>; /* GPIO4_D6 */
-	};
 
 	v2801_en: v2801-en {
 		compatible = "regulator-fixed";
@@ -84,6 +63,17 @@
 		pinctrl-0 = <&dc_ctl_h>;
 		regulator-name = "dc_ctl";
 		regulator-always-on;
+	};
+
+	vcc_otg_vbus: otg-vbus-regulator {
+		compatible = "regulator-fixed";
+		gpio = <&gpio1 3 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&otg_vbus_drv>;
+		regulator-name = "vcc_otg_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
 	};
 
 	vcc_lcd: vcc-lcd {
@@ -228,148 +218,24 @@
 
 &gmac {
 	tx_delay = <0x2F>;
-	rx_delay = <0x1E>;
-};
-
-&hdmi_dp_sound {
-	status = "okay";
-};
-
-&i2c2 {
-	status = "okay";
-	i2c-scl-rising-time-ns = <300>;
-	i2c-scl-falling-time-ns = <15>;
-
-	sensor@4c {
-		status = "disabled";
-		compatible = "gs_mc3230";
-		reg = <0x4c>;
-		type = <SENSOR_TYPE_ACCEL>;
-		irq_enable = <0>;
-		poll_delay_ms = <30>;
-		layout = <1>;
-	};
-};
-
-&i2c4 {
-	status = "okay";
-
-	gsl3680: gsl3680@41 {
-		compatible = "gslX680";
-		reg = <0x41>;
-		screen_max_x = <800>;
-		screen_max_y = <1280>;
-		touch-gpio = <&gpio4 28 IRQ_TYPE_LEVEL_LOW>;
-		reset-gpio = <&gpio4 21 GPIO_ACTIVE_HIGH>;
-		gsl,fw = <1>;
-		flip-x = <1>;
-		flip-y = <0>;
-		swap-xy = <0>;
-	};
-
-	sensor@4c {
-		status = "disabled";
-		compatible = "gs_mc3230";
-		reg = <0x4c>;
-		type = <SENSOR_TYPE_ACCEL>;
-		irq_enable = <0>;
-		poll_delay_ms = <30>;
-		layout = <1>;
-	};
-};
-
-
-&rt5640 {
-	hp-con-gpio = <&gpio1 22 GPIO_ACTIVE_HIGH>;
-	hp-det-gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>;
-	io-channels = <0>;
-	linein-mute = <1>;
-};
-
-&sdmmc {
-	/delete-property/ vmmc-supply;
-	mmc-pwrseq = <&sdmmc_pwrseq>;
-};
-
-&spi1 {
-    status = "okay";
-};
-
-&spi_wk2xxx {
-    status = "okay";
-	reset-gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
-	irq-gpio = <&gpio4 26 IRQ_TYPE_EDGE_FALLING>;
-	cs-gpio = <&gpio1 10 GPIO_ACTIVE_HIGH>;
-};
-
-&vcc3v3_3g {
-	gpio = <&gpio2 6 GPIO_ACTIVE_HIGH>;
-};
-
-&vcc3v3_pcie {
-    status = "disabled";
-};
-
-&uart4 {
-    status = "disabled";
-};
-
-&dp_in_vopb {
-	status = "disabled";
+	rx_delay = <0x26>;
 };
 
 &hdmi_in_vopb {
 	status = "disabled";
 };
 
-&wdt {
-	status = "disabled";
-};
-
-&io_domains {
-	bt656-supply = <&vcc_3v0>;
-};
-
-&vcc2v8_dvp {
-	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <1800000>;
-};
-
-&vcca1v8_codec {
-	regulator-min-microvolt = <900000>;
-	regulator-max-microvolt = <900000>;
+&hdmi_in_vopl {
+	status = "okay";
 };
 
 &pinctrl {
 	pinctrl-names = "default";
 	pinctrl-0 = <&host_hub_vcc>;
 
-	host-hub-vcc {
-		host_hub_vcc: host-hub-vcc {
-			rockchip,pins = <1 23 RK_FUNC_GPIO &pcfg_output_high>,
-				<2 4 RK_FUNC_GPIO &pcfg_output_high>,
-				<4 29 RK_FUNC_GPIO &pcfg_output_high>;
-		};
-	};
-
 	lcd {
 		lcd_en: lcd-en  {
 			rockchip,pins = <4 24 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
-
-
-	pcie {
-		pcie_3g_drv: pcie-3g-drv {
-			rockchip,pins =
-				<2 6 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
-	};
-
-	sdmmc-pwrseq {
-		sdcard_enable_h: sdcard-enable-h {
-			rockchip,pins =
-				<4 30 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -387,7 +253,14 @@
 		};
 	};
 
+	vbus-usb {
+		otg_vbus_drv: otg-vbus-drv {
+			rockchip,pins = <1 3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
 };
+
 
 &fusb0 {
     status = "disabled";
@@ -399,26 +272,26 @@
 
 &tcphy0 {
     /delete-property/ extcon;
-    status = "okay";
+    status = "disabled";
 };
 
 &u2phy0 {
     status = "okay";
     /delete-property/ extcon;
-
     u2phy0_otg: otg-port {
-        rockchip,vbus-always-on;
-        vbus-5v-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
-        status = "okay";
+        vbus-supply = <&vcc_otg_vbus>; /*配置Vbus regulator属性 */
+	status = "okay";
     };
 };
 
 &usbdrd3_0 {
     status = "okay";
-    /delete-property/ extcon;
+    extcon = <&u2phy0>;
 };
 
 &usbdrd_dwc3_0 {
-    dr_mode = "host";
+    dr_mode = "otg";
+    phys = <&u2phy0_otg>;
+    maximum-speed = "high-speed";
+    phy-names = "usb2-phy";
 };
-

@@ -45,10 +45,6 @@
 	model = "AIO-3399C Board LVDS HSX101H40C (Linux Opensource)";
 	compatible = "rockchip,rk3399-firefly", "rockchip,rk3399";
 
-	test-power {
-		status = "okay";
-	};
-
 	vcc_lcd: vcc-lcd {
 		compatible = "regulator-fixed";
 		enable-active-high;
@@ -189,11 +185,6 @@
 	status = "okay";
 };
 
-&gmac {
-	tx_delay = <0x2F>;
-	rx_delay = <0x1E>;
-};
-
 &i2c4 {
 	status = "okay";
 
@@ -223,6 +214,10 @@
 
 &hdmi_in_vopb {
 	status = "disabled";
+};
+
+&hdmi_in_vopl {
+	status = "okay";
 };
 
 &pinctrl {

@@ -42,10 +42,6 @@
 #include <dt-bindings/sensor-dev.h>
 
 / {
-	test-power {
-		status = "okay";
-	};
-
 	/delete-node/ vcc-sd;
 	sdmmc_pwrseq: sdmmc-pwrseq {
 		compatible = "mmc-pwrseq-simple";
@@ -71,8 +67,9 @@
 &dp_sound {
 	status = "okay";
 };
+
 &hdmi_dp_sound {
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmi_sound {
