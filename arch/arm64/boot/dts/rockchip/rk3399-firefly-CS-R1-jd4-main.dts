@@ -59,6 +59,58 @@
 	leds {
 		compatible = "gpio-leds";
 
+		//子板的reset脚，写0会reset子板
+		RESET_SUB1 {
+			gpios = <&gpio3 24 GPIO_ACTIVE_LOW>;	//GPIO3_D0 96+24
+			default-state = "on";
+		};
+
+		RESET_SUB2 {
+			gpios = <&gpio3 27 GPIO_ACTIVE_LOW>;	//GPIO3_D3 96+24+3
+			default-state = "on";
+		};
+
+		RESET_SUB3 {
+			gpios = <&gpio3 29 GPIO_ACTIVE_LOW>;	//GPIO3_D5 96+24+5
+			default-state = "on";
+		};
+
+		RESET_SUB4 {
+			gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;	//GPIO0_A4 0+4
+			default-state = "on";
+		};
+
+		RESET_SUB5 {
+			gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;	//GPIO0_A6 0+6
+			default-state = "on";
+		};
+
+		RESET_SUB6 {
+			gpios = <&gpio2 23 GPIO_ACTIVE_LOW>;	//GPIO2_C7 32*2+16+7
+			default-state = "on";
+		};
+
+		RESET_SUB7 {
+			gpios = <&gpio2 21 GPIO_ACTIVE_LOW>;	//GPIO2_C5 32*2+16+5
+			default-state = "on";
+		};
+
+		RESET_SUB8 {
+			gpios = <&gpio2 22 GPIO_ACTIVE_LOW>;	//GPIO2_C6 32*2+16+6
+			default-state = "on";
+		};
+
+		RESET_SUB9 {
+			gpios = <&gpio3 30 GPIO_ACTIVE_LOW>;	//GPIO3_D6 32*2+24+6
+			default-state = "on";
+		};
+
+		RESET_SUB10 {
+			gpios = <&gpio2 20 GPIO_ACTIVE_LOW>;	//GPIO2_C4 32*2+16+4
+			default-state = "on";
+		};
+
+		//SPI FLASH的电源脚
 		SPI_FLASH_PWR1 {
 			gpios = <&gpio4 4 GPIO_ACTIVE_HIGH>;	//SPI_FLASH_PWR1 GPIO4_A4	128+4		=132
 			default-state = "off";
