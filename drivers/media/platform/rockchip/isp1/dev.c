@@ -78,6 +78,8 @@ static char rkisp1_version[RKISP_VERNO_LEN];
 module_param_string(version, rkisp1_version, RKISP_VERNO_LEN, 0444);
 MODULE_PARM_DESC(version, "version number");
 
+static DEFINE_MUTEX(rkisp1_dev_mutex);
+static LIST_HEAD(rkisp1_device_list);
 
 /**************************** pipeline operations *****************************/
 
@@ -652,25 +654,6 @@ static int isp_subdev_notifier(struct rkisp1_device *isp_dev)
 	ntf->ops = &subdev_notifier_ops;
 
 	return v4l2_async_notifier_register(&isp_dev->v4l2_dev, ntf);
-}
-
-static void rkisp1_notify(struct v4l2_subdev *sd,
-			  unsigned int notification, void *arg)
-{
-	switch (notification) {
-	case V4L2_DEVICE_NOTIFY_EVENT:
-	{
-		const struct v4l2_event *ev = arg;
-		if (ev->type == V4L2_EVENT_SOURCE_CHANGE
-		&& ev->u.src_change.changes == V4L2_EVENT_SRC_CH_RESOLUTION) {
-		struct rkisp1_device *dev = container_of(sd->v4l2_dev, struct rkisp1_device, v4l2_dev);
-		_set_pipeline_default_fmt(dev);
-	}
-		break;
-	}
-	default:
-		break;
-	}
 }
 
 /***************************** platform deive *******************************/
@@ -1288,7 +1271,9 @@ static int rkisp1_plat_probe(struct platform_device *pdev)
 		writel(0, isp_dev->base_addr + CIF_ISP_CSI0_MASK3);
 	}
 
-	v4l2_dev->notify = rkisp1_notify;
+	mutex_lock(&rkisp1_dev_mutex);
+	list_add_tail(&isp_dev->list, &rkisp1_device_list);
+	mutex_unlock(&rkisp1_dev_mutex);
 	return 0;
 
 err_runtime_disable:
@@ -1372,6 +1357,18 @@ static int __maybe_unused rkisp1_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static int __init rkisp1_clr_unready_dev(void)
+{
+	struct rkisp1_device *isp_dev;
+
+	mutex_lock(&rkisp1_dev_mutex);
+	list_for_each_entry(isp_dev, &rkisp1_device_list, list)
+		v4l2_async_notifier_clr_unready_dev(&isp_dev->notifier);
+	mutex_unlock(&rkisp1_dev_mutex);
+
+	return 0;
+}
+late_initcall_sync(rkisp1_clr_unready_dev);
 
 static const struct dev_pm_ops rkisp1_plat_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(rkisp1_suspend, rkisp1_resume)

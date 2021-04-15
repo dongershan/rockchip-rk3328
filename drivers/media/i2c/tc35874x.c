@@ -146,10 +146,6 @@ struct tc35874x_state {
 	struct v4l2_ctrl *audio_sampling_rate_ctrl;
 	struct v4l2_ctrl *audio_present_ctrl;
 
-	/* fake controls to satisfy someone */
-	struct v4l2_ctrl *exposure;
-	struct v4l2_ctrl *vblank;
-
 	struct delayed_work delayed_work_enable_hotplug;
 
 	struct timer_list timer;
@@ -875,7 +871,7 @@ static void tc35874x_initial_setup(struct v4l2_subdev *sd)
 	struct tc35874x_platform_data *pdata = &state->pdata;
 
 	/* CEC and IR are not supported by this driver */
-	i2c_wr16_and_or(sd, SYSCTL, ~(MASK_CECRST | MASK_IRRST | MASK_I2SDIS),
+	i2c_wr16_and_or(sd, SYSCTL, ~(MASK_CECRST | MASK_IRRST),
 			(MASK_CECRST | MASK_IRRST));
 
 	tc35874x_reset(sd, MASK_CTXRST | MASK_HDMIRST);
@@ -1415,16 +1411,6 @@ static int tc35874x_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 		return -EINVAL;
 	}
 }
-
-/* --------------- CTRL OPS --------------- */
-static int tc35874x_s_ctrl(struct v4l2_ctrl *ctrl)
-{
-	return 0;
-}
-
-static const struct v4l2_ctrl_ops tc35874x_ctrl_ops = {
-	.s_ctrl = tc35874x_s_ctrl,
-};
 
 /* --------------- VIDEO OPS --------------- */
 
@@ -2008,7 +1994,7 @@ static int tc35874x_probe(struct i2c_client *client,
 			  const struct i2c_device_id *id)
 {
 	static struct v4l2_dv_timings default_timing =
-		V4L2_DV_BT_CEA_1920X1080P60; // V4L2_DV_BT_CEA_640X480P59_94;
+		V4L2_DV_BT_CEA_640X480P59_94;
 	struct tc35874x_state *state;
 	struct tc35874x_platform_data *pdata = client->dev.platform_data;
 	struct v4l2_subdev *sd;
@@ -2094,10 +2080,6 @@ static int tc35874x_probe(struct i2c_client *client,
 
 	state->audio_present_ctrl = v4l2_ctrl_new_custom(&state->hdl,
 			&tc35874x_ctrl_audio_present, NULL);
-	state->exposure = v4l2_ctrl_new_std(&state->hdl,
-			&tc35874x_ctrl_ops, V4L2_CID_EXPOSURE, 0, 100, 1, 0);
-	state->vblank = v4l2_ctrl_new_std(&state->hdl,
-			&tc35874x_ctrl_ops, V4L2_CID_VBLANK, 0, 100, 1, 0);
 
 	sd->ctrl_handler = &state->hdl;
 	if (state->hdl.error) {
@@ -2128,7 +2110,6 @@ static int tc35874x_probe(struct i2c_client *client,
 	snprintf(sd->name, sizeof(sd->name), "m%02d_%s_%s %s",
 		 state->module_index, facing,
 		 TC35874X_NAME, dev_name(sd->dev));
-	state->timings = default_timing;
 	err = v4l2_async_register_subdev(sd);
 	if (err < 0)
 		goto err_hdl;
@@ -2230,7 +2211,7 @@ static const struct of_device_id tc35874x_of_match[] = {
 MODULE_DEVICE_TABLE(of, tc35874x_of_match);
 #endif
 
-static struct i2c_driver tc35874x_i2c_driver = {
+static struct i2c_driver tc35874x_driver = {
 	.driver = {
 		.name = TC35874X_NAME,
 		.of_match_table = of_match_ptr(tc35874x_of_match),
@@ -2240,15 +2221,4 @@ static struct i2c_driver tc35874x_i2c_driver = {
 	.id_table = tc35874x_id,
 };
 
-static int __init sensor_mod_init(void)
-{
-	return i2c_add_driver(&tc35874x_i2c_driver);
-}
-
-static void __exit sensor_mod_exit(void)
-{
-	i2c_del_driver(&tc35874x_i2c_driver);
-}
-
-device_initcall_sync(sensor_mod_init);
-module_exit(sensor_mod_exit);
+module_i2c_driver(tc35874x_driver);
