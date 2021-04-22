@@ -258,6 +258,8 @@
 //pcie0 reset port
 &pcie0 {
 	ep-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
+	/delete-property/pinctrl-names;
+	/delete-property/pinctrl-0;
 };
 
 &i2c4 {
