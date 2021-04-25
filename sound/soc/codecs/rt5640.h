@@ -2115,6 +2115,7 @@ struct rt5640_priv {
 	bool linein_mute;
 	int hp_con_gpio;
 	int hp_det_gpio;
+	int led_gpio;
 	bool hp_con_gpio_active_high;
 	struct snd_soc_jack hp_jack;
 };
