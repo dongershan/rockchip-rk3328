@@ -50,6 +50,11 @@
 	rx_delay = <0x1E>;
 };
 
+
+&vcc_sd_h {
+	rockchip,pins = <1 22 RK_FUNC_GPIO &pcfg_pull_up>;
+};
+
 &vcc_sd {
 	gpio = <&gpio1 22 GPIO_ACTIVE_HIGH>;
 };
@@ -184,8 +189,6 @@
              		rockchip,pins = <3 10 RK_FUNC_GPIO &pcfg_pull_none>;
         };
     };
-
-
 };
 
 &fusb0 {
