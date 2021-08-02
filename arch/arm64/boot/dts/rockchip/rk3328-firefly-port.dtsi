@@ -133,6 +133,10 @@
 	status = "okay";	
 };
 
+&route_tve {
+	status = "disabled";
+};
+
 &gmac2io {
 	phy-supply = <&vcc_phy>;
 	phy-mode = "rgmii";

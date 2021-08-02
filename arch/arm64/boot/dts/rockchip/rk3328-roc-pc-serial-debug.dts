@@ -2,14 +2,14 @@
 #include "rk3328-roc-pc.dtsi"
 
 &fiq_debugger {
-	status = "disabled";
+	status = "okay";
 };
 
 &wireless_bluetooth {
-	status = "okay";
+	status = "disabled";
 };
 
 &uart2 {
 	dma-names = "tx", "rx";
-	status = "okay";
+	status = "disabled";
 };
