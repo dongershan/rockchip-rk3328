@@ -127,7 +127,7 @@ dtbs: prepare scripts
 	$(Q)$(MAKE) $(build)=$(boot)/dts
 
 dtbs_install:
-	$(Q)$(MAKE) $(dtbinst)=$(boot)/dts
+	$(Q)$(MAKE) $(dtbinst)=$(boot)/dts/rockchip
 
 Image-dtb Image.gz-dtb: vmlinux scripts dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
