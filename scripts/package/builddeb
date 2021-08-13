@@ -165,8 +165,6 @@ if grep -q "^CONFIG_ARCH_ROCKCHIP=y" $KCONFIG_CONFIG ; then
     if [ -f "$tmpdir/usr/lib/$packagename/${RK_KERNEL_DTS}.dtb" ]; then
         cp "$tmpdir/usr/lib/$packagename/${RK_KERNEL_DTS}.dtb" "$tmpdir/boot/"
         echo -e "\tfdt /${RK_KERNEL_DTS}.dtb" >> $tmpdir/boot/extlinux/extlinux.conf
-        APPEND="$( dtc -qqq -I dtb "$tmpdir/boot/${RK_KERNEL_DTS}.dtb" -O dts | grep bootargs | cut -f 2 -d "\"")"
-        echo -e "\tappend $APPEND" >> $tmpdir/boot/extlinux/extlinux.conf
     fi
     if [ -e "ramdisk.img" ]; then
         cp "ramdisk.img" "$tmpdir/boot/initrd-$version"
