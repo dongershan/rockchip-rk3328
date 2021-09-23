@@ -260,6 +260,7 @@
 	ep-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;
 	/delete-property/pinctrl-names;
 	/delete-property/pinctrl-0;
+	max-link-speed = <2>;
 };
 
 &i2c4 {
