@@ -421,7 +421,6 @@ static int rk808_rtc_probe(struct platform_device *pdev)
 {
 	struct rk808 *rk808 = dev_get_drvdata(pdev->dev.parent);
 	struct rk808_rtc *rk808_rtc;
-	struct rtc_time tm;
 	struct device_node *np;
 	int ret;
 
@@ -477,15 +476,6 @@ static int rk808_rtc_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	/* set init time */
-	ret = rk808_rtc_readtime(&pdev->dev, &tm);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to read RTC time\n");
-		return ret;
-	}
-	ret = rtc_valid_tm(&tm);
-	if (ret)
-		dev_warn(&pdev->dev, "invalid date/time\n");
 
 	device_init_wakeup(&pdev->dev, 1);
 
