@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2013-2018 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2013-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -32,27 +32,6 @@
 
 /* Include mandatory definitions per platform */
 #include <mali_kbase_config_platform.h>
-
-/**
-* Boolean indicating whether the driver is configured to be secure at
-* a potential loss of performance.
-*
-* This currently affects only r0p0-15dev0 HW and earlier.
-*
-* On r0p0-15dev0 HW and earlier, there are tradeoffs between security and
-* performance:
-*
-* - When this is set to true, the driver remains fully secure,
-* but potentially loses performance compared with setting this to
-* false.
-* - When set to false, the driver is open to certain security
-* attacks.
-*
-* From r0p0-00rel0 and onwards, there is no security loss by setting
-* this to false, and no performance loss by setting it to
-* true.
-*/
-#define DEFAULT_SECURE_BUT_LOSS_OF_PERFORMANCE false
 
 enum {
 	/**
@@ -109,48 +88,6 @@ enum {
 };
 
 /**
- * Default setting for read Address ID limiting on AXI bus.
- *
- * Attached value: u32 register value
- *    KBASE_AID_32 - use the full 32 IDs (5 ID bits)
- *    KBASE_AID_16 - use 16 IDs (4 ID bits)
- *    KBASE_AID_8  - use 8 IDs (3 ID bits)
- *    KBASE_AID_4  - use 4 IDs (2 ID bits)
- * Default value: KBASE_AID_32 (no limit). Note hardware implementation
- * may limit to a lower value.
- */
-#define DEFAULT_ARID_LIMIT KBASE_AID_32
-
-/**
- * Default setting for write Address ID limiting on AXI.
- *
- * Attached value: u32 register value
- *    KBASE_AID_32 - use the full 32 IDs (5 ID bits)
- *    KBASE_AID_16 - use 16 IDs (4 ID bits)
- *    KBASE_AID_8  - use 8 IDs (3 ID bits)
- *    KBASE_AID_4  - use 4 IDs (2 ID bits)
- * Default value: KBASE_AID_32 (no limit). Note hardware implementation
- * may limit to a lower value.
- */
-#define DEFAULT_AWID_LIMIT KBASE_AID_32
-
-/**
- * Default setting for read Address ID limiting on AXI bus.
- *
- * Default value: KBASE_3BIT_AID_32 (no limit). Note hardware implementation
- * may limit to a lower value.
- */
-#define DEFAULT_3BIT_ARID_LIMIT KBASE_3BIT_AID_32
-
-/**
- * Default setting for write Address ID limiting on AXI.
- *
- * Default value: KBASE_3BIT_AID_32 (no limit). Note hardware implementation
- * may limit to a lower value.
- */
-#define DEFAULT_3BIT_AWID_LIMIT KBASE_3BIT_AID_32
-
-/**
  * Default period for DVFS sampling
  */
 #define DEFAULT_PM_DVFS_PERIOD 100 /* 100ms */
@@ -169,11 +106,6 @@ enum {
  * Power Manager number of ticks before shader cores are powered off
  */
 #define DEFAULT_PM_POWEROFF_TICK_SHADER (2) /* 400-800us */
-
-/**
- * Power Manager number of ticks before GPU is powered off
- */
-#define DEFAULT_PM_POWEROFF_TICK_GPU (2) /* 400-800us */
 
 /**
  * Default scheduling tick granuality
@@ -197,7 +129,6 @@ enum {
  * Default minimum number of scheduling ticks before jobs are hard-stopped
  */
 #define DEFAULT_JS_HARD_STOP_TICKS_SS    (50) /* 5s */
-#define DEFAULT_JS_HARD_STOP_TICKS_SS_8408  (300) /* 30s */
 
 /**
  * Default minimum number of scheduling ticks before CL jobs are hard-stopped.
@@ -221,7 +152,6 @@ enum {
  * "stuck" job
  */
 #define DEFAULT_JS_RESET_TICKS_SS           (55) /* 5.5s */
-#define DEFAULT_JS_RESET_TICKS_SS_8408     (450) /* 45s */
 
 /**
  * Default minimum number of scheduling ticks before the GPU is reset to clear a
@@ -253,26 +183,31 @@ enum {
 #define DEFAULT_JS_CTX_TIMESLICE_NS (50000000) /* 50ms */
 
 /**
- * Perform GPU power down using only platform specific code, skipping DDK power
- * management.
- *
- * If this is non-zero then kbase will avoid powering down shader cores, the
- * tiler, and the L2 cache, instead just powering down the entire GPU through
- * platform specific code. This may be required for certain platform
- * integrations.
- *
- * Note that as this prevents kbase from powering down shader cores, this limits
- * the available power policies to coarse_demand and always_on.
- */
-#define PLATFORM_POWER_DOWN_ONLY (0)
-
-/**
  * Maximum frequency (in kHz) that the GPU can be clocked. For some platforms
  * this isn't available, so we simply define a dummy value here. If devfreq
  * is enabled the value will be read from there, otherwise this should be
  * overridden by defining GPU_FREQ_KHZ_MAX in the platform file.
  */
 #define DEFAULT_GPU_FREQ_KHZ_MAX (5000)
+
+/**
+ * Default timeout for task execution on an endpoint
+ *
+ * Number of GPU clock cycles before the driver terminates a task that is
+ * making no forward progress on an endpoint (e.g. shader core).
+ * Value chosen is equivalent to the time after which a job is hard stopped
+ * which is 5 seconds (assuming the GPU is usually clocked at ~500 MHZ).
+ */
+#define DEFAULT_PROGRESS_TIMEOUT ((u64)5 * 500 * 1024 * 1024)
+
+/**
+ * Default threshold at which to switch to incremental rendering
+ *
+ * Fraction of the maximum size of an allocation that grows on GPU page fault
+ * that can be used up before the driver switches to incremental rendering,
+ * in 256ths. 0 means disable incremental rendering.
+ */
+#define DEFAULT_IR_THRESHOLD (192)
 
 #endif /* _KBASE_CONFIG_DEFAULTS_H_ */
 

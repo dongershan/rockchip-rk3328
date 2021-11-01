@@ -22,7 +22,6 @@
 	rockchip,sleep-mode-config = <
 		(0
 		| RKPM_PMU_HW_PLLS_PD
-		| RKPM_DBG_FSM_SOUT
 		| RKPM_PWM_VOLTAGE_DEFAULT
 		)
 	>;
@@ -31,6 +30,7 @@
 &thermal_zones {
 	soc-thermal {
 		sustainable-power = <422>;
+		rk3308bs-sustainable-power = <363>;
 		k_pu = <6>;
 		k_po = <1024>;
 		k_i = <0>;

@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011-2016 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2016, 2018-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -34,6 +34,7 @@
 #include <linux/atomic.h>
 
 #include <backend/gpu/mali_kbase_jm_rb.h>
+#include <device/mali_kbase_device.h>
 
 /**
  * kbase_job_submit_nolock() - Submit a job to a certain job-slot
@@ -70,6 +71,15 @@ static inline char *kbasep_make_job_slot_string(int js, char *js_string,
 }
 #endif
 
+#if !MALI_USE_CSF
+static inline int kbasep_jm_is_js_free(struct kbase_device *kbdev, int js,
+						struct kbase_context *kctx)
+{
+	return !kbase_reg_read(kbdev, JOB_SLOT_REG(js, JS_COMMAND_NEXT));
+}
+#endif
+
+
 /**
  * kbase_job_hw_submit() - Submit a job to the GPU
  * @kbdev:	Device pointer
@@ -86,6 +96,7 @@ void kbase_job_hw_submit(struct kbase_device *kbdev,
 				struct kbase_jd_atom *katom,
 				int js);
 
+#if !MALI_USE_CSF
 /**
  * kbasep_job_slot_soft_or_hard_stop_do_action() - Perform a soft or hard stop
  *						   on the specified atom
@@ -104,6 +115,7 @@ void kbasep_job_slot_soft_or_hard_stop_do_action(struct kbase_device *kbdev,
 					u32 action,
 					base_jd_core_req core_reqs,
 					struct kbase_jd_atom *target_katom);
+#endif /* !MALI_USE_CSF */
 
 /**
  * kbase_backend_soft_hard_stop_slot() - Soft or hard stop jobs on a given job
@@ -159,11 +171,11 @@ void kbase_job_slot_halt(struct kbase_device *kbdev);
 void kbase_job_slot_term(struct kbase_device *kbdev);
 
 /**
- * kbase_gpu_cacheclean - Cause a GPU cache clean & flush
+ * kbase_gpu_cache_clean - Cause a GPU cache clean & flush
  * @kbdev: Device pointer
  *
  * Caller must not be in IRQ context
  */
-void kbase_gpu_cacheclean(struct kbase_device *kbdev);
+void kbase_gpu_cache_clean(struct kbase_device *kbdev);
 
 #endif /* _KBASE_JM_HWACCESS_H_ */

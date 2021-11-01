@@ -26,6 +26,7 @@
 #define RK3288_UART_FRAC_MAX_PRATE	600000000
 #define RK3288_I2S_FRAC_MAX_PRATE	600000000
 #define RK3288_SPDIF_FRAC_MAX_PRATE	600000000
+#define RK3288_DCLK_PARENT_MAX_PRATE	600000000
 
 enum rk3288_plls {
 	apll, dpll, cpll, gpll, npll,
@@ -73,7 +74,7 @@ static struct rockchip_pll_rate_table rk3288_pll_rates[] = {
 	RK3066_PLL_RATE(1248000000, 1, 52, 1),
 	RK3066_PLL_RATE(1224000000, 1, 51, 1),
 	RK3066_PLL_RATE(1200000000, 1, 50, 1),
-	RK3066_PLL_RATE(1188000000, 2, 99, 1),
+	RK3066_PLL_RATE(1188000000, 1, 99, 2),
 	RK3066_PLL_RATE(1176000000, 1, 49, 1),
 	RK3066_PLL_RATE(1128000000, 1, 47, 1),
 	RK3066_PLL_RATE(1104000000, 1, 46, 1),
@@ -88,7 +89,7 @@ static struct rockchip_pll_rate_table rk3288_pll_rates[] = {
 	RK3066_PLL_RATE( 742500000, 8, 495, 2),
 	RK3066_PLL_RATE( 696000000, 1, 58, 2),
 	RK3066_PLL_RATE( 600000000, 1, 50, 2),
-	RK3066_PLL_RATE_NB(594000000, 2, 198, 4, 1),
+	RK3066_PLL_RATE_NB(594000000, 1, 99, 4, 1),
 	RK3066_PLL_RATE( 552000000, 1, 46, 2),
 	RK3066_PLL_RATE( 504000000, 1, 84, 4),
 	RK3066_PLL_RATE( 500000000, 3, 125, 2),
@@ -202,6 +203,12 @@ PNAME(mux_mac_p)	= { "mac_pll_src", "ext_gmac" };
 PNAME(mux_hsadcout_p)	= { "hsadc_src", "ext_hsadc" };
 PNAME(mux_edp_24m_p)	= { "ext_edp_24m", "xin24m" };
 PNAME(mux_tspout_p)	= { "cpll", "gpll", "npll", "xin27m" };
+
+PNAME(mux_testout_src_p) = { "aclk_peri", "armclk", "aclk_vio0", "ddrphy",
+			     "aclk_vcodec", "aclk_gpu", "sclk_rga", "aclk_cpu",
+			     "xin24m", "xin27m", "xin32k", "clk_wifi",
+			     "dclk_vop0", "dclk_vop1", "sclk_isp_jpe",
+			     "sclk_isp" };
 
 PNAME(mux_usbphy480m_p)		= { "sclk_otgphy1_480m", "sclk_otgphy2_480m",
 				    "sclk_otgphy0_480m" };
@@ -436,9 +443,9 @@ static struct rockchip_clk_branch rk3288_clk_branches[] __initdata = {
 	COMPOSITE(DCLK_VOP0, "dclk_vop0", mux_pll_src_cpll_gpll_npll_p, 0,
 			RK3288_CLKSEL_CON(27), 0, 2, MFLAGS, 8, 8, DFLAGS,
 			RK3288_CLKGATE_CON(3), 1, GFLAGS),
-	COMPOSITE(DCLK_VOP1, "dclk_vop1", mux_pll_src_cpll_gpll_npll_p, 0,
+	COMPOSITE_DCLK(DCLK_VOP1, "dclk_vop1", mux_pll_src_cpll_gpll_npll_p, CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
 			RK3288_CLKSEL_CON(29), 6, 2, MFLAGS, 8, 8, DFLAGS,
-			RK3288_CLKGATE_CON(3), 3, GFLAGS),
+			RK3288_CLKGATE_CON(3), 3, GFLAGS, RK3288_DCLK_PARENT_MAX_PRATE),
 
 	COMPOSITE_NODIV(SCLK_EDP_24M, "sclk_edp_24m", mux_edp_24m_p, 0,
 			RK3288_CLKSEL_CON(28), 15, 1, MFLAGS,
@@ -558,6 +565,12 @@ static struct rockchip_clk_branch rk3288_clk_branches[] __initdata = {
 	COMPOSITE_NOMUX(SCLK_TSADC, "sclk_tsadc", "xin32k", 0,
 			RK3288_CLKSEL_CON(2), 0, 6, DFLAGS,
 			RK3288_CLKGATE_CON(2), 7, GFLAGS),
+
+	MUX(SCLK_TESTOUT_SRC, "sclk_testout_src", mux_testout_src_p, 0,
+	    RK3288_MISC_CON, 8, 4, MFLAGS),
+	COMPOSITE_NOMUX(SCLK_TESTOUT, "sclk_testout", "sclk_testout_src", 0,
+			RK3288_CLKSEL_CON(2), 8, 5, DFLAGS,
+			RK3288_CLKGATE_CON(4), 15, GFLAGS),
 
 	COMPOSITE_NOMUX(SCLK_SARADC, "sclk_saradc", "xin24m", 0,
 			RK3288_CLKSEL_CON(24), 8, 8, DFLAGS,

@@ -142,6 +142,12 @@
 #define m_RGA2_DST_INFO_SW_DITHER_MODE               (  0x3<<14)
 #define m_RGA2_DST_INFO_SW_DST_CSC_MODE              (  0x3<<16)    //add
 #define m_RGA2_DST_INFO_SW_CSC_CLIP_MODE             (  0x1<<18)
+#define m_RGA2_DST_INFO_SW_DST_CSC_MODE_2            (  0x1<<19)    //add
+#define m_RGA2_DST_INFO_SW_DST_FMT_YUV400_EN         (  0x1<<24)
+#define m_RGA2_DST_INFO_SW_DST_FMT_Y4_EN             (  0x1<<25)
+#define m_RGA2_DST_INFO_SW_DST_NN_QUANTIZE_EN        (  0x1<<26)
+#define m_RGA2_DST_INFO_SW_SRC1_CSC_MODE             (  0x3<<20)    //add
+#define m_RGA2_DST_INFO_SW_SRC1_CSC_CLIP_MODE        (  0x1<<22)
 
 #define s_RGA2_DST_INFO_SW_DST_FMT(x)                   (  (x&0xf)<<0 )
 #define s_RGA2_DST_INFO_SW_DST_RB_SWAP(x)               (  (x&0x1)<<4 )
@@ -155,6 +161,12 @@
 #define s_RGA2_DST_INFO_SW_DITHER_MODE(x)               (  (x&0x3)<<14)
 #define s_RGA2_DST_INFO_SW_DST_CSC_MODE(x)              (  (x&0x3)<<16)    //add
 #define s_RGA2_DST_INFO_SW_CSC_CLIP_MODE(x)             (  (x&0x1)<<18)
+#define s_RGA2_DST_INFO_SW_DST_CSC_MODE_2(x)            (  (x&0x1)<<19)    //add
+#define s_RGA2_DST_INFO_SW_DST_FMT_YUV400_EN(x)         (  (x&0x1)<<24)
+#define s_RGA2_DST_INFO_SW_DST_FMT_Y4_EN(x)             (  (x&0x1)<<25)
+#define s_RGA2_DST_INFO_SW_DST_NN_QUANTIZE_EN(x)        (  (x&0x1)<<26)
+#define s_RGA2_DST_INFO_SW_SRC1_CSC_MODE(x)             (  (x&0x3)<<20)    //add
+#define s_RGA2_DST_INFO_SW_SRC1_CSC_CLIP_MODE(x)        (  (x&0x1)<<22)
 
 
 /* RGA_ALPHA_CTRL0 */
@@ -254,6 +266,19 @@
 #define RGA2_INT_OFFSET                  0x10
 #define RGA2_MMU_CTRL0_OFFSET            0x14
 #define RGA2_MMU_CMD_BASE_OFFSET         0x18
+/* dst full csc */
+#define RGA2_DST_CSC_00_OFFSET                  0x0
+#define RGA2_DST_CSC_01_OFFSET                  0x4
+#define RGA2_DST_CSC_02_OFFSET                  0x8
+#define RGA2_DST_CSC_OFF0_OFFSET                0xc
+#define RGA2_DST_CSC_10_OFFSET                  0x10
+#define RGA2_DST_CSC_11_OFFSET                  0x14
+#define RGA2_DST_CSC_12_OFFSET                  0x18
+#define RGA2_DST_CSC_OFF1_OFFSET                0x1c
+#define RGA2_DST_CSC_20_OFFSET                  0x20
+#define RGA2_DST_CSC_21_OFFSET                  0x24
+#define RGA2_DST_CSC_22_OFFSET                  0x28
+#define RGA2_DST_CSC_OFF2_OFFSET                0x2c
 
 #define RGA2_MODE_CTRL_OFFSET                   0x00
 #define RGA2_SRC_INFO_OFFSET                    0x04
@@ -283,8 +308,12 @@
 #define RGA2_PAT_CON_OFFSET                     0x5c
 #define RGA2_ROP_CTRL0_OFFSET                   0x60
 #define RGA2_CF_GR_G_OFFSET                     0x60 // repeat
+#define RGA2_DST_Y4MAP_LUT0_OFFSET             0x60 // repeat
+#define RGA2_DST_QUANTIZE_SCALE_OFFSET         0x60 // repeat
 #define RGA2_ROP_CTRL1_OFFSET                   0x64
 #define RGA2_CF_GR_R_OFFSET                     0x64 // repeat
+#define RGA2_DST_Y4MAP_LUT1_OFFSET              0x64 // repeat
+#define RGA2_DST_QUANTIZE_OFFSET_OFFSET         0x64 // repeat
 #define RGA2_MASK_BASE_OFFSET                   0x68
 #define RGA2_MMU_CTRL1_OFFSET                   0x6c
 #define RGA2_MMU_SRC_BASE_OFFSET                0x70
@@ -292,7 +321,7 @@
 #define RGA2_MMU_DST_BASE_OFFSET                0x78
 #define RGA2_MMU_ELS_BASE_OFFSET                0x7c
 
-int RGA2_gen_reg_info(unsigned char *base, struct rga2_req *msg);
+int RGA2_gen_reg_info(unsigned char *base, unsigned char *csc_base, struct rga2_req *msg);
 void RGA_MSG_2_RGA2_MSG(struct rga_req *req_rga, struct rga2_req *req);
 void RGA_MSG_2_RGA2_MSG_32(struct rga_req_32 *req_rga, struct rga2_req *req);
 

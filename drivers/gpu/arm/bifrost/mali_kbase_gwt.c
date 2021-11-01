@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2018 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -35,12 +35,13 @@ static inline void kbase_gpu_gwt_setup_page_permission(
 		int err = 0;
 
 		reg = rb_entry(rbnode, struct kbase_va_region, rblink);
-		if (reg->nr_pages && !(reg->flags & KBASE_REG_FREE) &&
+		if (reg->nr_pages && !kbase_is_region_invalid_or_free(reg) &&
 					(reg->flags & KBASE_REG_GPU_WR)) {
 			err = kbase_mmu_update_pages(kctx, reg->start_pfn,
 					kbase_get_gpu_phy_pages(reg),
 					reg->gpu_alloc->nents,
-					reg->flags & flag);
+					reg->flags & flag,
+					reg->gpu_alloc->group_id);
 			if (err)
 				dev_warn(kctx->kbdev->dev, "kbase_mmu_update_pages failure\n");
 		}
@@ -54,8 +55,6 @@ static void kbase_gpu_gwt_setup_pages(struct kbase_context *kctx,
 {
 	kbase_gpu_gwt_setup_page_permission(kctx, flag,
 				rb_first(&(kctx->reg_rbtree_same)));
-	kbase_gpu_gwt_setup_page_permission(kctx, flag,
-				rb_first(&(kctx->reg_rbtree_exec)));
 	kbase_gpu_gwt_setup_page_permission(kctx, flag,
 				rb_first(&(kctx->reg_rbtree_custom)));
 }
@@ -72,6 +71,7 @@ int kbase_gpu_gwt_start(struct kbase_context *kctx)
 	INIT_LIST_HEAD(&kctx->gwt_current_list);
 	INIT_LIST_HEAD(&kctx->gwt_snapshot_list);
 
+#if !MALI_USE_CSF
 	/* If GWT is enabled using new vector dumping format
 	 * from user space, back up status of the job serialization flag and
 	 * use full serialisation of jobs for dumping.
@@ -81,6 +81,7 @@ int kbase_gpu_gwt_start(struct kbase_context *kctx)
 	kctx->kbdev->serialize_jobs = KBASE_SERIALIZE_INTRA_SLOT |
 						KBASE_SERIALIZE_INTER_SLOT;
 
+#endif
 	/* Mark gwt enabled before making pages read only in case a
 	   write page fault is triggered while we're still in this loop.
 	   (kbase_gpu_vm_lock() doesn't prevent this!)
@@ -114,7 +115,9 @@ int kbase_gpu_gwt_stop(struct kbase_context *kctx)
 		kfree(pos);
 	}
 
+#if !MALI_USE_CSF
 	kctx->kbdev->serialize_jobs = kctx->kbdev->backup_serialize_jobs;
+#endif
 
 	kbase_gpu_gwt_setup_pages(kctx, ~0UL);
 

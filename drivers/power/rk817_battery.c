@@ -620,6 +620,7 @@ struct rk817_battery_device {
 	int				plugout_irq;
 	int				chip_id;
 	int				is_register_chg_psy;
+	bool				change;
 };
 
 static u64 get_boot_sec(void)
@@ -703,6 +704,14 @@ static int rk817_bat_field_write(struct rk817_battery_device *battery,
 				 unsigned int val)
 {
 	return regmap_field_write(battery->rmap_fields[field_id], val);
+}
+
+static bool rk817_is_bat_exist(struct rk817_battery_device *battery)
+{
+	if (battery->chip_id == RK817_ID)
+		return rk817_bat_field_read(battery, BAT_EXS) ? true : false;
+
+	return true;
 }
 
 /*cal_offset: current offset value*/
@@ -1859,6 +1868,8 @@ static int rk817_bat_parse_dt(struct rk817_battery_device *battery)
 	ret = of_property_read_u32(np, "virtual_power", &pdata->bat_mode);
 	if (ret < 0)
 		dev_err(dev, "virtual_power missing!\n");
+	if (!rk817_is_bat_exist(battery))
+		battery->pdata->bat_mode = MODE_VIRTUAL;
 
 	ret = of_property_read_u32(np, "bat_res", &pdata->bat_res);
 	if (ret < 0)
@@ -2169,9 +2180,10 @@ static void rk817_bat_power_supply_changed(struct rk817_battery_device *battery)
 	else if (battery->dsoc < 0)
 		battery->dsoc = 0;
 
-	if (battery->dsoc == old_soc)
+	if (battery->dsoc == old_soc && !battery->change)
 		return;
 
+	battery->change = false;
 	old_soc = battery->dsoc;
 	battery->last_dsoc = battery->dsoc;
 	power_supply_changed(battery->bat);
@@ -2222,6 +2234,7 @@ rk817_bat_update_charging_status(struct rk817_battery_device *battery)
 	if (is_charging == battery->is_charging)
 		return;
 
+	battery->change = true;
 	battery->is_charging = is_charging;
 	if (is_charging)
 		battery->charge_count++;
@@ -2372,7 +2385,7 @@ static void rk817_bat_smooth_algorithm(struct rk817_battery_device *battery)
 	}
 
 	/* discharge: sm_linek < 0, if delate_cap <0, ydsoc > 0 */
-	ydsoc = battery->sm_linek * abs(delta_cap / DIV(battery->fcc)) / 10;
+	ydsoc = battery->sm_linek * abs(delta_cap / 10) / DIV(battery->fcc);
 
 	DBG("smooth: ydsoc = %d, fcc = %d\n", ydsoc, battery->fcc);
 	if (ydsoc == 0) {
@@ -3215,7 +3228,7 @@ static int rk817_bat_sleep_dischrg(struct rk817_battery_device *battery)
 
 		DBG("calib1: rsoc=%d, dsoc=%d, intval=%d\n",
 		    battery->rsoc, battery->dsoc, sleep_soc);
-		if (gap_soc > sleep_soc) {
+		if (gap_soc / 1000 > sleep_soc) {
 			if ((gap_soc - 5000) > (sleep_soc * 2 * 1000))
 				battery->dsoc -= (sleep_soc * 2 * 1000);
 			else

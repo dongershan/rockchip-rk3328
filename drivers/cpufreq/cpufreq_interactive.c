@@ -33,6 +33,8 @@
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
+#include <linux/irq_work.h>
+#include <asm/topology.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/cpufreq_interactive.h>
@@ -56,6 +58,11 @@ struct cpufreq_interactive_cpuinfo {
 	u64 loc_hispeed_val_time; /* per-cpu hispeed_validate_time */
 	struct rw_semaphore enable_sem;
 	int governor_enabled;
+	int cpu;
+	unsigned int task_boost_freq;
+	unsigned long task_boost_util;
+	u64 task_boos_endtime;
+	struct irq_work irq_work;
 };
 
 static DEFINE_PER_CPU(struct cpufreq_interactive_cpuinfo, cpuinfo);
@@ -401,6 +408,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 	if ((now < tunables->touchboostpulse_endtime) &&
 	    (new_freq < tunables->touchboost_freq)) {
 		new_freq = tunables->touchboost_freq;
+	}
+	if ((now < pcpu->task_boos_endtime) && (new_freq < pcpu->task_boost_freq)) {
+		new_freq = pcpu->task_boost_freq;
 	}
 #endif
 	if (pcpu->policy->cur >= tunables->hispeed_freq &&
@@ -1331,6 +1341,89 @@ static void rockchip_cpufreq_policy_init(struct cpufreq_policy *policy)
 	else
 		*tunables = backup_tunables[index];
 }
+
+static unsigned int get_freq_for_util(struct cpufreq_policy *policy, unsigned long util)
+{
+	struct cpufreq_frequency_table *pos;
+	unsigned long max_cap, cur_cap;
+	unsigned int freq = 0;
+
+	max_cap = arch_scale_cpu_capacity(NULL, policy->cpu);
+	cpufreq_for_each_valid_entry(pos, policy->freq_table) {
+		freq = pos->frequency;
+
+		cur_cap = max_cap * freq / policy->max;
+		if (cur_cap > util)
+			break;
+	}
+
+	return freq;
+}
+
+static void task_boost_irq_work(struct irq_work *irq_work)
+{
+	struct cpufreq_interactive_tunables *tunables;
+	struct cpufreq_interactive_cpuinfo *pcpu;
+	struct cpufreq_policy *policy;
+	unsigned long flags[2];
+	u64 now, prev_boos_endtime;
+	unsigned int boost_freq;
+
+	pcpu = container_of(irq_work, struct cpufreq_interactive_cpuinfo, irq_work);
+	if (!down_read_trylock(&pcpu->enable_sem))
+		return;
+
+	policy = pcpu->policy;
+	if (!pcpu->governor_enabled || !policy)
+		goto out;
+
+	if (policy->cur == policy->max)
+		goto out;
+
+	if (have_governor_per_policy())
+		tunables = policy->governor_data;
+	else
+		tunables = common_tunables;
+	if (!tunables)
+		goto out;
+
+	now = ktime_to_us(ktime_get());
+	prev_boos_endtime = pcpu->task_boos_endtime;
+	pcpu->task_boos_endtime = now + tunables->timer_rate;
+	boost_freq = get_freq_for_util(policy, pcpu->task_boost_util);
+	if ((now < prev_boos_endtime) && (boost_freq <= pcpu->task_boost_freq))
+		goto out;
+	pcpu->task_boost_freq = boost_freq;
+
+	spin_lock_irqsave(&speedchange_cpumask_lock, flags[0]);
+	spin_lock_irqsave(&pcpu->target_freq_lock, flags[1]);
+	if (pcpu->target_freq < pcpu->task_boost_freq) {
+		pcpu->target_freq = pcpu->task_boost_freq;
+		cpumask_set_cpu(pcpu->cpu, &speedchange_cpumask);
+		wake_up_process(speedchange_task);
+	}
+	spin_unlock_irqrestore(&pcpu->target_freq_lock, flags[1]);
+	spin_unlock_irqrestore(&speedchange_cpumask_lock, flags[0]);
+
+out:
+	up_read(&pcpu->enable_sem);
+}
+
+void cpufreq_task_boost(int cpu, unsigned long util)
+{
+	struct cpufreq_interactive_cpuinfo *pcpu = &per_cpu(cpuinfo, cpu);
+	unsigned long cap, min_util;
+
+	if (!speedchange_task)
+		return;
+
+	min_util = util + (util >> 2);
+	cap = capacity_curr_of(cpu);
+	if (min_util > cap) {
+		pcpu->task_boost_util = min_util;
+		irq_work_queue(&pcpu->irq_work);
+	}
+}
 #endif
 
 static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
@@ -1479,6 +1572,9 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			pcpu = &per_cpu(cpuinfo, j);
 			down_write(&pcpu->enable_sem);
 			pcpu->governor_enabled = 0;
+#ifdef CONFIG_ARCH_ROCKCHIP
+			irq_work_sync(&pcpu->irq_work);
+#endif
 			del_timer_sync(&pcpu->cpu_timer);
 			del_timer_sync(&pcpu->cpu_slack_timer);
 			up_write(&pcpu->enable_sem);
@@ -1541,6 +1637,10 @@ static int __init cpufreq_interactive_init(void)
 	/* Initalize per-cpu timers */
 	for_each_possible_cpu(i) {
 		pcpu = &per_cpu(cpuinfo, i);
+#ifdef CONFIG_ARCH_ROCKCHIP
+		pcpu->cpu = i;
+		init_irq_work(&pcpu->irq_work, task_boost_irq_work);
+#endif
 		init_timer_deferrable(&pcpu->cpu_timer);
 		pcpu->cpu_timer.function = cpufreq_interactive_timer;
 		pcpu->cpu_timer.data = i;

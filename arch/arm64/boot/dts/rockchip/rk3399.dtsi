@@ -78,6 +78,12 @@
 		serial2 = &uart2;
 		serial3 = &uart3;
 		serial4 = &uart4;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		spi2 = &spi2;
+		spi3 = &spi3;
+		spi4 = &spi4;
+		spi5 = &spi5;
 	};
 
 	cpus {
@@ -1167,7 +1173,7 @@
 			compatible = "rockchip,rk3399-pmu-pvtm";
 			clocks = <&pmucru SCLK_PVTM_PMU>;
 			clock-names = "pmu";
-			resets = <&cru SRST_PVTM>;
+			resets = <&pmucru SRST_PVTM>;
 			reset-names = "pmu";
 			status = "disabled";
 		};
@@ -1498,6 +1504,10 @@
 		wafer_info: wafer-info@1c {
 			reg = <0x1c 0x1>;
 		};
+		customer_demand: customer-demand@22 {
+			reg = <0x22 0x1>;
+			bits = <4 4>;
+		};
 	};
 
 	pmucru: pmu-clock-controller@ff750000 {
@@ -1562,6 +1572,7 @@
 			clock-names = "phyclk";
 			#clock-cells = <0>;
 			clock-output-names = "clk_usbphy0_480m";
+			power-domains = <&power RK3399_PD_PERIHP>;
 			status = "disabled";
 
 			u2phy0_host: host-port {
@@ -1589,6 +1600,7 @@
 			clock-names = "phyclk";
 			#clock-cells = <0>;
 			clock-output-names = "clk_usbphy1_480m";
+			power-domains = <&power RK3399_PD_PERIHP>;
 			status = "disabled";
 
 			u2phy1_host: host-port {

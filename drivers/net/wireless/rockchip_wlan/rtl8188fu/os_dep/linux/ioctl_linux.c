@@ -4895,6 +4895,9 @@ static int rtw_p2p_set_go_nego_ssid(struct net_device *dev,
 	struct iw_point *pdata = &wrqu->data;
 	struct wifidirect_info *pwdinfo= &(padapter->wdinfo);
 
+	if (wrqu->data.length > WLAN_SSID_MAXLEN - 1)
+		return -EINVAL;
+
 	DBG_871X( "[%s] ssid = %s, len = %zu\n", __FUNCTION__, extra, strlen( extra ) );
 	_rtw_memcpy( pwdinfo->nego_ssid, extra, strlen( extra ) );
 	pwdinfo->nego_ssidlen = strlen( extra );
@@ -4912,6 +4915,9 @@ static int rtw_p2p_set_intent(struct net_device *dev,
 	_adapter 						*padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct wifidirect_info 			*pwdinfo= &(padapter->wdinfo);
 	u8							intent = pwdinfo->intent;
+
+	if (wrqu->data.length >= 4096)
+		return -1;
 
 	extra[ wrqu->data.length ] = 0x00;
 
@@ -4941,6 +4947,9 @@ static int rtw_p2p_set_listen_ch(struct net_device *dev,
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct wifidirect_info *pwdinfo= &(padapter->wdinfo);
 	u8	listen_ch = pwdinfo->listen_channel;	//	Listen channel number
+
+	if (wrqu->data.length >= 4096)
+		return -1;
 
 	extra[ wrqu->data.length ] = 0x00;
 	listen_ch = rtw_atoi( extra );
@@ -4972,6 +4981,9 @@ static int rtw_p2p_set_op_ch(struct net_device *dev,
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct wifidirect_info *pwdinfo= &(padapter->wdinfo);
 	u8	op_ch = pwdinfo->operating_channel;	//	Operating channel number
+
+	if (wrqu->data.length >= 4096)
+		return -1;
 
 	extra[ wrqu->data.length ] = 0x00;
 
@@ -5060,6 +5072,8 @@ static int rtw_p2p_setDN(struct net_device *dev,
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
 	struct wifidirect_info *pwdinfo= &(padapter->wdinfo);
 
+	if (wrqu->data.length > WPS_MAX_DEVICE_NAME_LEN - 1)
+		return -EINVAL;
 
 	DBG_871X( "[%s] %s %d\n", __FUNCTION__, extra, wrqu->data.length -1  );
 	_rtw_memset( pwdinfo->device_name, 0x00, WPS_MAX_DEVICE_NAME_LEN );
@@ -13705,7 +13719,7 @@ static int _rtw_ioctl_wext_private(struct net_device *dev, union iwreq_data *wrq
 				count = 0;
 				do {
 					str = strsep(&ptr, delim);
-					if (NULL == str) break;
+					if (NULL == str || count >= 4096) break;
 					sscanf(str, "%i", &temp);
 					buffer[count++] = (u8)temp;
 				} while (1);
@@ -13723,7 +13737,7 @@ static int _rtw_ioctl_wext_private(struct net_device *dev, union iwreq_data *wrq
 				count = 0;
 				do {
 					str = strsep(&ptr, delim);
-					if (NULL == str) break;
+					if (NULL == str || count >= 1024) break;
 					sscanf(str, "%i", &temp);
 					((s32*)buffer)[count++] = (s32)temp;
 				} while (1);
@@ -13837,6 +13851,11 @@ static int _rtw_ioctl_wext_private(struct net_device *dev, union iwreq_data *wrq
 		extra = buffer;
 
 	handler = priv[priv_args[k].cmd - SIOCIWFIRSTPRIV];
+	if (handler == NULL) {
+		err = -EINVAL;
+		goto exit;
+	}
+
 	err = handler(dev, NULL, &wdata, extra);
 
 	/* If we have to get some data */

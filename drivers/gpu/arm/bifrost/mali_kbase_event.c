@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2016 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2016,2018-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -24,11 +24,13 @@
 
 #include <mali_kbase.h>
 #include <mali_kbase_debug.h>
-#include <mali_kbase_tlstream.h>
+#include <tl/mali_kbase_tracepoints.h>
+#include <mali_linux_trace.h>
 
 static struct base_jd_udata kbase_event_process(struct kbase_context *kctx, struct kbase_jd_atom *katom)
 {
 	struct base_jd_udata data;
+	struct kbase_device *kbdev;
 
 	lockdep_assert_held(&kctx->jctx.lock);
 
@@ -36,29 +38,18 @@ static struct base_jd_udata kbase_event_process(struct kbase_context *kctx, stru
 	KBASE_DEBUG_ASSERT(katom != NULL);
 	KBASE_DEBUG_ASSERT(katom->status == KBASE_JD_ATOM_STATE_COMPLETED);
 
+	kbdev = kctx->kbdev;
 	data = katom->udata;
 
-	KBASE_TIMELINE_ATOMS_IN_FLIGHT(kctx, atomic_sub_return(1, &kctx->timeline.jd_atoms_in_flight));
-
-	KBASE_TLSTREAM_TL_NRET_ATOM_CTX(katom, kctx);
-	KBASE_TLSTREAM_TL_DEL_ATOM(katom);
+	KBASE_TLSTREAM_TL_NRET_ATOM_CTX(kbdev, katom, kctx);
+	KBASE_TLSTREAM_TL_DEL_ATOM(kbdev, katom);
 
 	katom->status = KBASE_JD_ATOM_STATE_UNUSED;
-
+	dev_dbg(kbdev->dev, "Atom %p status to unused\n", (void *)katom);
 	wake_up(&katom->completed);
 
 	return data;
 }
-
-int kbase_event_pending(struct kbase_context *ctx)
-{
-	KBASE_DEBUG_ASSERT(ctx);
-
-	return (atomic_read(&ctx->event_count) != 0) ||
-			(atomic_read(&ctx->event_closed) != 0);
-}
-
-KBASE_EXPORT_TEST_API(kbase_event_pending);
 
 int kbase_event_dequeue(struct kbase_context *ctx, struct base_jd_event_v2 *uevent)
 {
@@ -93,6 +84,7 @@ int kbase_event_dequeue(struct kbase_context *ctx, struct base_jd_event_v2 *ueve
 
 	dev_dbg(ctx->kbdev->dev, "event dequeuing %p\n", (void *)atom);
 	uevent->event_code = atom->event_code;
+
 	uevent->atom_number = (atom - ctx->jctx.atoms);
 
 	if (atom->core_req & BASE_JD_REQ_EXTERNAL_RESOURCES)
@@ -172,22 +164,37 @@ static int kbase_event_coalesce(struct kbase_context *kctx)
 
 void kbase_event_post(struct kbase_context *ctx, struct kbase_jd_atom *atom)
 {
+	struct kbase_device *kbdev = ctx->kbdev;
+
+	dev_dbg(kbdev->dev, "Posting event for atom %p\n", (void *)atom);
+
+	if (WARN_ON(atom->status != KBASE_JD_ATOM_STATE_COMPLETED)) {
+		dev_warn(kbdev->dev,
+				"%s: Atom %d (%p) not completed (status %d)\n",
+				__func__,
+				kbase_jd_atom_id(atom->kctx, atom),
+				atom->kctx,
+				atom->status);
+		return;
+	}
+
 	if (atom->core_req & BASE_JD_REQ_EVENT_ONLY_ON_FAILURE) {
 		if (atom->event_code == BASE_JD_EVENT_DONE) {
-			/* Don't report the event */
+			dev_dbg(kbdev->dev, "Suppressing event (atom done)\n");
 			kbase_event_process_noreport(ctx, atom);
 			return;
 		}
 	}
 
 	if (atom->core_req & BASEP_JD_REQ_EVENT_NEVER) {
-		/* Don't report the event */
+		dev_dbg(kbdev->dev, "Suppressing event (never)\n");
 		kbase_event_process_noreport(ctx, atom);
 		return;
 	}
-	KBASE_TLSTREAM_TL_ATTRIB_ATOM_STATE(atom, TL_ATOM_STATE_POSTED);
+	KBASE_TLSTREAM_TL_ATTRIB_ATOM_STATE(kbdev, atom, TL_ATOM_STATE_POSTED);
 	if (atom->core_req & BASE_JD_REQ_EVENT_COALESCE) {
 		/* Don't report the event until other event(s) have completed */
+		dev_dbg(kbdev->dev, "Deferring event (coalesced)\n");
 		mutex_lock(&ctx->event_mutex);
 		list_add_tail(&atom->dep_item[0], &ctx->event_coalesce_list);
 		++ctx->event_coalesce_count;
@@ -201,8 +208,13 @@ void kbase_event_post(struct kbase_context *ctx, struct kbase_jd_atom *atom)
 		list_add_tail(&atom->dep_item[0], &ctx->event_list);
 		atomic_add(event_count, &ctx->event_count);
 		mutex_unlock(&ctx->event_mutex);
+		dev_dbg(kbdev->dev, "Reporting %d events\n", event_count);
 
 		kbase_event_wakeup(ctx);
+
+		/* Post-completion latency */
+		trace_sysgraph(SGR_POST, ctx->id,
+					kbase_jd_atom_id(ctx, atom));
 	}
 }
 KBASE_EXPORT_TEST_API(kbase_event_post);
@@ -222,9 +234,7 @@ int kbase_event_init(struct kbase_context *kctx)
 	INIT_LIST_HEAD(&kctx->event_list);
 	INIT_LIST_HEAD(&kctx->event_coalesce_list);
 	mutex_init(&kctx->event_mutex);
-	atomic_set(&kctx->event_count, 0);
 	kctx->event_coalesce_count = 0;
-	atomic_set(&kctx->event_closed, false);
 	kctx->event_workq = alloc_workqueue("kbase_event", WQ_MEM_RECLAIM, 1);
 
 	if (NULL == kctx->event_workq)

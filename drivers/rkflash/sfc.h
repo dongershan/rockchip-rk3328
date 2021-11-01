@@ -5,9 +5,10 @@
 #ifndef _SFC_H
 #define _SFC_H
 
-#define SFC_VER_3		0x3 /* ver 3, else ver 1 */
+#define SFC_VER_3		0x3
+#define SFC_VER_4		0x4
+#define SFC_VER_5		0x5
 
-#define SFC_MAX_IOSIZE		(1024 * 8)    /* 8K byte */
 #define SFC_EN_INT		(0)         /* enable interrupt */
 #define SFC_EN_DMA		(1)         /* enable dma */
 #define SFC_FIFO_DEPTH		(0x10)      /* 16 words */
@@ -65,6 +66,11 @@
 /* SFC_RCVR Register */
 #define SFC_RESET	BIT(0)     /* controller reset */
 
+/* SFC_DLL_CTRL Register */
+#define SCLK_SMP_SEL_EN		BIT(15)	/* SCLK Sampling Selection */
+#define SCLK_SMP_SEL_MAX_V4	0xFF	/* SCLK Sampling Selection */
+#define SCLK_SMP_SEL_MAX_V5	0x1FF	/* SCLK Sampling Selection */
+
 /* SFC_SR Register */
 /* sfc busy flag. When busy, don't try to set the control register */
 #define SFC_BUSY	BIT(0)
@@ -86,8 +92,11 @@
 #define SFC_RAWISR	0x28
 #define SFC_VER		0x2C
 #define SFC_QOP		0x30
+#define SFC_DLL_CTRL0	0x3C
 #define SFC_DMA_TRIGGER	0x80
 #define SFC_DMA_ADDR	0x84
+#define SFC_LEN_CTRL	0x88
+#define SFC_LEN_EXT	0x8C
 #define SFC_CMD		0x100
 #define SFC_ADDR	0x104
 #define SFC_DATA	0x108
@@ -180,10 +189,33 @@ union SFCCMD_DATA {
 	} b;
 };
 
+struct rk_sfc_op {
+	union SFCCMD_DATA sfcmd;
+	union SFCCTRL_DATA sfctrl;
+};
+
+#define IDB_BLOCK_TAG_ID	0xFCDC8C3B
+
+struct id_block_tag {
+	u32 id;
+	u32 version;
+	u32 flags;
+	u16 boot_img_offset;
+	u8  reserved1[10];
+	u32 dev_param[8];
+	u8  reserved2[506 - 56];
+	u16 data_img_len;
+	u16 boot_img_len;
+	u8  reserved3[512 - 510];
+} __packed;
+
 int sfc_init(void __iomem *reg_addr);
-int sfc_request(u32 sfcmd, u32 sfctrl, u32 addr, void *data);
+int sfc_request(struct rk_sfc_op *op, u32 addr, void *data, u32 size);
 u16 sfc_get_version(void);
 void sfc_clean_irq(void);
+u32 sfc_get_max_iosize(void);
+void sfc_set_delay_lines(u16 cells);
+void sfc_disable_delay_lines(void);
 void sfc_handle_irq(void);
 unsigned long rksfc_dma_map_single(unsigned long ptr, int size, int dir);
 void rksfc_dma_unmap_single(unsigned long ptr, int size, int dir);

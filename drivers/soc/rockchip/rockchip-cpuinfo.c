@@ -29,13 +29,15 @@ static int rockchip_cpuinfo_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct nvmem_cell *cell;
 	unsigned char *efuse_buf, buf[16];
-	size_t len;
+	size_t len = 0;
 	int i;
 
 	cell = nvmem_cell_get(dev, "cpu-version");
 	if (!IS_ERR(cell)) {
 		efuse_buf = nvmem_cell_read(cell, &len);
 		nvmem_cell_put(cell);
+		if (IS_ERR(efuse_buf))
+			return PTR_ERR(efuse_buf);
 
 		if (len == 1)
 			rockchip_set_cpu_version(efuse_buf[0]);
@@ -51,6 +53,8 @@ static int rockchip_cpuinfo_probe(struct platform_device *pdev)
 	}
 	efuse_buf = nvmem_cell_read(cell, &len);
 	nvmem_cell_put(cell);
+	if (IS_ERR(efuse_buf))
+		return PTR_ERR(efuse_buf);
 
 	if (len != 16) {
 		kfree(efuse_buf);
@@ -132,14 +136,21 @@ static void rk3308_init(void)
 #define RK3308_GRF_CHIP_ID	0x800
 	base = ioremap(RK3308_GRF_PHYS, SZ_4K);
 	if (base) {
-		if (readl_relaxed(base + RK3308_GRF_CHIP_ID) == 0x3308)
+		u32 v = readl_relaxed(base + RK3308_GRF_CHIP_ID);
+
+		if (v == 0x3308)
 			rockchip_soc_id = ROCKCHIP_SOC_RK3308B;
+		if (v == 0x3308c)
+			rockchip_soc_id = ROCKCHIP_SOC_RK3308BS;
 		iounmap(base);
 	}
 }
 
-static int __init rockchip_soc_id_init(void)
+int __init rockchip_soc_id_init(void)
 {
+	if (rockchip_soc_id)
+		return 0;
+
 	if (cpu_is_rk3288()) {
 		rk3288_init();
 	} else if (cpu_is_rk312x()) {

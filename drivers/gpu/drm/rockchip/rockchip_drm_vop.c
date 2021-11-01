@@ -35,6 +35,7 @@
 #include <linux/component.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
+#include <linux/gpio/consumer.h>
 
 #include <linux/reset.h>
 #include <linux/delay.h>
@@ -261,6 +262,10 @@ struct vop {
 	void __iomem *cabc_lut_regs;
 	u32 cabc_lut_len;
 
+	void __iomem *bypass_wport_regs;
+	u32 bypass_wport_len;
+	struct gpio_desc *mcu_rs_gpio;
+
 	/* one time only one process allowed to config the register */
 	spinlock_t reg_lock;
 	/* lock vop irq reg */
@@ -288,6 +293,9 @@ struct vop {
 
 	struct vop_win win[];
 };
+
+static void vop_tv_config_update(struct drm_crtc *crtc,
+				 struct drm_crtc_state *old_crtc_state);
 
 static void vop_lock(struct vop *vop)
 {
@@ -519,6 +527,22 @@ static inline void vop_write_lut(struct vop *vop, uint32_t offset, uint32_t v)
 static inline uint32_t vop_read_lut(struct vop *vop, uint32_t offset)
 {
 	return readl(vop->lut_regs + offset);
+}
+
+static inline void vop_mcu_write_bypass_wport(struct vop *vop, uint32_t v)
+{
+	if (vop->bypass_wport_regs)
+		writel(v, vop->bypass_wport_regs);
+	else
+		VOP_CTRL_SET(vop, mcu_rw_bypass_port, v);
+}
+
+static inline void vop_mcu_set_rs(struct vop *vop, int v)
+{
+	if (vop->mcu_rs_gpio)
+		gpiod_set_value(vop->mcu_rs_gpio, v);
+	else
+		VOP_CTRL_SET(vop, mcu_rs, v);
 }
 
 static inline void vop_write_cabc_lut(struct vop *vop, uint32_t offset, uint32_t v)
@@ -911,8 +935,11 @@ static int to_vop_csc_mode(int csc_mode)
 {
 	switch (csc_mode) {
 	case V4L2_COLORSPACE_SMPTE170M:
+	case V4L2_COLORSPACE_470_SYSTEM_M:
+	case V4L2_COLORSPACE_470_SYSTEM_BG:
 		return CSC_BT601L;
 	case V4L2_COLORSPACE_REC709:
+	case V4L2_COLORSPACE_SMPTE240M:
 	case V4L2_COLORSPACE_DEFAULT:
 		return CSC_BT709L;
 	case V4L2_COLORSPACE_JPEG:
@@ -1001,10 +1028,15 @@ static int vop_setup_csc_table(const struct vop_csc_table *csc_table,
 				*r2r_table = csc_table->r2r_bt2020_to_bt709;
 			if (!is_input_yuv || *y2r_table) {
 				if (output_csc == V4L2_COLORSPACE_REC709 ||
+				    output_csc == V4L2_COLORSPACE_SMPTE240M ||
 				    output_csc == V4L2_COLORSPACE_DEFAULT)
 					*r2y_table = csc_table->r2y_bt709;
+				else if (output_csc == V4L2_COLORSPACE_SMPTE170M ||
+					 output_csc == V4L2_COLORSPACE_470_SYSTEM_M ||
+					 output_csc == V4L2_COLORSPACE_470_SYSTEM_BG)
+					*r2y_table = csc_table->r2y_bt601_12_235; /* bt601 limit */
 				else
-					*r2y_table = csc_table->r2y_bt601;
+					*r2y_table = csc_table->r2y_bt601; /* bt601 full */
 			}
 		}
 	} else {
@@ -1019,11 +1051,16 @@ static int vop_setup_csc_table(const struct vop_csc_table *csc_table,
 
 		if (input_csc == V4L2_COLORSPACE_BT2020)
 			*y2r_table = csc_table->y2r_bt2020;
-		else if ((input_csc == V4L2_COLORSPACE_REC709) ||
-			 (input_csc == V4L2_COLORSPACE_DEFAULT))
+		else if (input_csc == V4L2_COLORSPACE_REC709 ||
+			 input_csc == V4L2_COLORSPACE_SMPTE240M ||
+			 input_csc == V4L2_COLORSPACE_DEFAULT)
 			*y2r_table = csc_table->y2r_bt709;
+		else if (input_csc == V4L2_COLORSPACE_SMPTE170M ||
+			 input_csc == V4L2_COLORSPACE_470_SYSTEM_M ||
+			 input_csc == V4L2_COLORSPACE_470_SYSTEM_BG)
+			*y2r_table = csc_table->y2r_bt601_12_235; /* bt601 limit */
 		else
-			*y2r_table = csc_table->y2r_bt601;
+			*y2r_table = csc_table->y2r_bt601;  /* bt601 full */
 
 		if (input_csc == V4L2_COLORSPACE_BT2020)
 			/*
@@ -2500,13 +2537,13 @@ static void vop_crtc_send_mcu_cmd(struct drm_crtc *crtc,  u32 type, u32 value)
 	if (vop && vop->is_enabled) {
 		switch (type) {
 		case MCU_WRCMD:
-			VOP_CTRL_SET(vop, mcu_rs, 0);
-			VOP_CTRL_SET(vop, mcu_rw_bypass_port, value);
-			VOP_CTRL_SET(vop, mcu_rs, 1);
+			vop_mcu_set_rs(vop, 0);
+			vop_mcu_write_bypass_wport(vop, value);
+			vop_mcu_set_rs(vop, 1);
 			break;
 		case MCU_WRDATA:
-			VOP_CTRL_SET(vop, mcu_rs, 1);
-			VOP_CTRL_SET(vop, mcu_rw_bypass_port, value);
+			vop_mcu_set_rs(vop, 1);
+			vop_mcu_write_bypass_wport(vop, value);
 			break;
 		case MCU_SETBYPASS:
 			VOP_CTRL_SET(vop, mcu_bypass, value ? 1 : 0);
@@ -2620,7 +2657,7 @@ static void vop_update_csc(struct drm_crtc *crtc)
 	/*
 	 * Background color is 10bit depth if vop version >= 3.5
 	 */
-	if (!is_yuv_output(s->bus_format))
+	if (!is_yuv_output(s->bus_format) || !VOP_CTRL_SUPPORT(vop, overlay_mode))
 		val = 0;
 	else if (VOP_MAJOR(vop->version) == 3 && VOP_MINOR(vop->version) == 8 &&
 		 s->hdr.pre_overlay)
@@ -2723,6 +2760,10 @@ static void vop_crtc_enable(struct drm_crtc *crtc)
 	 */
 	if (vop->lut_active)
 		vop_crtc_load_lut(crtc);
+
+	if (vop->mcu_timing.mcu_pix_total)
+		vop_mcu_mode(crtc);
+
 	dclk_inv = (adjusted_mode->flags & DRM_MODE_FLAG_PPIXDATA) ? 0 : 1;
 
 	VOP_CTRL_SET(vop, dclk_pol, dclk_inv);
@@ -2856,9 +2897,8 @@ static void vop_crtc_enable(struct drm_crtc *crtc)
 
 	clk_set_rate(vop->dclk, adjusted_mode->crtc_clock * 1000);
 
-	if (vop->mcu_timing.mcu_pix_total)
-		vop_mcu_mode(crtc);
-
+	if (!VOP_CTRL_SUPPORT(vop, overlay_mode))
+		vop_tv_config_update(crtc, &s->base);
 	vop_cfg_done(vop);
 
 	enable_irq(vop->irq);
@@ -3357,28 +3397,48 @@ static void vop_tv_config_update(struct drm_crtc *crtc,
 	}
 
 	if (vop_data->feature & VOP_FEATURE_OUTPUT_10BIT)
-		brightness = interpolate(0, -128, 100, 127,
-					 s->tv_state->brightness);
+		brightness = interpolate(0, -128, 100, 127, s->tv_state->brightness);
+	else if (VOP_MAJOR(vop->version) == 2 && VOP_MINOR(vop->version) == 6) /* px30 vopb */
+		brightness = interpolate(0, -64, 100, 63, s->tv_state->brightness);
 	else
-		brightness = interpolate(0, -32, 100, 31,
-					 s->tv_state->brightness);
-	contrast = interpolate(0, 0, 100, 511, s->tv_state->contrast);
-	saturation = interpolate(0, 0, 100, 511, s->tv_state->saturation);
-	hue = interpolate(0, -30, 100, 30, s->tv_state->hue);
+		brightness = interpolate(0, -32, 100, 31, s->tv_state->brightness);
 
-	/*
-	 *  a:[-30~0]:
-	 *    sin_hue = 0x100 - sin(a)*256;
-	 *    cos_hue = cos(a)*256;
-	 *  a:[0~30]
-	 *    sin_hue = sin(a)*256;
-	 *    cos_hue = cos(a)*256;
-	 */
-	sin_hue = fixp_sin32(hue) >> 23;
-	cos_hue = fixp_cos32(hue) >> 23;
+	if ((VOP_MAJOR(vop->version) == 3) ||
+	    (VOP_MAJOR(vop->version) == 2 && VOP_MINOR(vop->version) == 6)) { /* px30 vopb */
+		contrast = interpolate(0, 0, 100, 511, s->tv_state->contrast);
+		saturation = interpolate(0, 0, 100, 511, s->tv_state->saturation);
+		/*
+		 *  a:[-30~0]:
+		 *    sin_hue = 0x100 - sin(a)*256;
+		 *    cos_hue = cos(a)*256;
+		 *  a:[0~30]
+		 *    sin_hue = sin(a)*256;
+		 *    cos_hue = cos(a)*256;
+		 */
+		hue = interpolate(0, -30, 100, 30, s->tv_state->hue);
+		sin_hue = fixp_sin32(hue) >> 23;
+		cos_hue = fixp_cos32(hue) >> 23;
+		VOP_CTRL_SET(vop, bcsh_sat_con, saturation * contrast / 0x100);
+
+	} else {
+		contrast = interpolate(0, 0, 100, 255, s->tv_state->contrast);
+		saturation = interpolate(0, 0, 100, 255, s->tv_state->saturation);
+		/*
+		 *  a:[-30~0]:
+		 *    sin_hue = 0x100 - sin(a)*128;
+		 *    cos_hue = cos(a)*128;
+		 *  a:[0~30]
+		 *    sin_hue = sin(a)*128;
+		 *    cos_hue = cos(a)*128;
+		 */
+		hue = interpolate(0, -30, 100, 30, s->tv_state->hue);
+		sin_hue = fixp_sin32(hue) >> 24;
+		cos_hue = fixp_cos32(hue) >> 24;
+		VOP_CTRL_SET(vop, bcsh_sat_con, saturation * contrast / 0x80);
+	}
+
 	VOP_CTRL_SET(vop, bcsh_brightness, brightness);
 	VOP_CTRL_SET(vop, bcsh_contrast, contrast);
-	VOP_CTRL_SET(vop, bcsh_sat_con, saturation * contrast / 0x100);
 	VOP_CTRL_SET(vop, bcsh_sin_hue, sin_hue);
 	VOP_CTRL_SET(vop, bcsh_cos_hue, cos_hue);
 	VOP_CTRL_SET(vop, bcsh_out_mode, BCSH_OUT_MODE_NORMAL_VIDEO);
@@ -4562,6 +4622,14 @@ static int vop_bind(struct device *dev, struct device *master, void *data)
 			return PTR_ERR(vop->lut_regs);
 	}
 
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "bypass_wport");
+	if (res) {
+		vop->bypass_wport_regs = devm_ioremap_resource(dev, res);
+		if (IS_ERR(vop->bypass_wport_regs))
+			return PTR_ERR(vop->bypass_wport_regs);
+		vop->bypass_wport_len = resource_size(res);
+	}
+
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "cabc_lut");
 	if (res) {
 		vop->cabc_lut_len = resource_size(res) >> 2;
@@ -4656,6 +4724,12 @@ static int vop_bind(struct device *dev, struct device *master, void *data)
 			vop->mcu_timing.mcu_rw_pend = val;
 		if (!of_property_read_u32(mcu, "mcu-hold-mode", &val))
 			vop->mcu_timing.mcu_hold_mode = val;
+
+		vop->mcu_rs_gpio = devm_gpiod_get_optional(dev, "mcu-rs", GPIOD_OUT_LOW);
+		if (IS_ERR(vop->mcu_rs_gpio)) {
+			dev_err(dev, "failed to request mcu rs gpio\n");
+			return PTR_ERR(vop->mcu_rs_gpio);
+		}
 	}
 
 	return 0;

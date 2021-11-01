@@ -1,5 +1,5 @@
 #
-# (C) COPYRIGHT 2015, 2017-2018 ARM Limited. All rights reserved.
+# (C) COPYRIGHT 2015, 2017-2018, 2020 ARM Limited. All rights reserved.
 #
 # This program is free software and is provided to you under the terms of the
 # GNU General Public License version 2 as published by the Free Software
@@ -31,12 +31,15 @@ endif
 TEST_CCFLAGS := \
 	-DMALI_UNIT_TEST=$(MALI_UNIT_TEST) \
 	-DMALI_CUSTOMER_RELEASE=$(MALI_CUSTOMER_RELEASE) \
+	-DMALI_USE_CSF=$(MALI_USE_CSF) \
 	$(SCONS_CFLAGS) \
 	-I$(CURDIR)/../include \
 	-I$(CURDIR)/../../../../../../include \
 	-I$(CURDIR)/../../../ \
 	-I$(CURDIR)/../../ \
 	-I$(CURDIR)/../../backend/gpu \
+	-I$(CURDIR)/../../debug \
+	-I$(CURDIR)/../../debug/backend \
 	-I$(CURDIR)/ \
 	-I$(srctree)/drivers/staging/android \
 	-I$(srctree)/include/linux

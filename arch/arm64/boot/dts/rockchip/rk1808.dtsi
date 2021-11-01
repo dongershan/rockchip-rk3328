@@ -21,6 +21,7 @@
 	#size-cells = <2>;
 
 	aliases {
+		ethernet0 = &gmac;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -207,34 +208,34 @@
 
 	bus_soc: bus-soc {
 		compatible = "rockchip,rk1808-bus";
-		rockchip,busfreq-policy = "autocs";
+		rockchip,busfreq-policy = "smc";
 		soc-bus0 {
 			bus-id = <0>;
-			timer-us = <20>;
+			cfg-val = <0x1e0>;
 			enable-msk = <0x407f>;
 			status = "okay";
 		};
 		soc-bus1 {
 			bus-id = <1>;
-			timer-us = <200>;
+			cfg-val = <0x12c0>;
 			enable-msk = <0x41ff>;
 			status = "okay";
 		};
 		soc-bus2 {
 			bus-id = <2>;
-			timer-us = <200>;
+			cfg-val = <0x12c0>;
 			enable-msk = <0x4005>;
 			status = "okay";
 		};
 		soc-bus3 {
 			bus-id = <3>;
-			timer-us = <200>;
+			cfg-val = <0x12c0>;
 			enable-msk = <0x4001>;
 			status = "okay";
 		};
 		soc-bus4 {
 			bus-id = <4>;
-			timer-us = <200>;
+			cfg-val = <0x12c0>;
 			enable-msk = <0x4001>;
 			status = "disabled";
 		};
@@ -293,8 +294,6 @@
 		clock-frequency = <32768>;
 		clock-output-names = "xin32k";
 		#clock-cells = <0>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&clkin_32k>;
 	};
 
 	pcie0: pcie@fc400000 {
@@ -645,15 +644,12 @@
 		#reset-cells = <1>;
 
 		assigned-clocks =
-			<&cru SCLK_32K_IOE>,
 			<&cru PLL_GPLL>, <&cru PLL_CPLL>,
 			<&cru PLL_PPLL>, <&cru ARMCLK>,
 			<&cru MSCLK_PERI>, <&cru LSCLK_PERI>,
 			<&cru HSCLK_BUS_PRE>, <&cru MSCLK_BUS_PRE>,
 			<&cru LSCLK_BUS_PRE>;
-		assigned-clock-parents = <&xin32k>;
 		assigned-clock-rates =
-			<32768>,
 			<1188000000>, <1000000000>,
 			<100000000>, <816000000>,
 			<200000000>, <100000000>,
@@ -1433,7 +1429,6 @@
 		clocks = <&cru ACLK_RGA>, <&cru HCLK_RGA>, <&cru SCLK_RGA>;
 		clock-names = "aclk_rga", "hclk_rga", "clk_rga";
 		power-domains = <&power RK1808_PD_VIO>;
-		dma-coherent;
 		status = "disabled";
 	};
 

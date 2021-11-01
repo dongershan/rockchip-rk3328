@@ -547,6 +547,14 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3288-evb-android-rk818-lvds.dtb \
 	rk3288-evb-android-rk818-mipi.dtb \
 	rk3288-evb-android-rk818-mipi-edp.dtb \
+	rk3288-evb-rk628-hdmi2csi-avb.dtb \
+	rk3288-evb-rk628-hdmi2dsi-avb.dtb \
+	rk3288-evb-rk628-hdmi2gvi-avb.dtb \
+	rk3288-evb-rk628-rgb2dsi-avb.dtb \
+	rk3288-evb-rk628-rgb2gvi-avb.dtb \
+	rk3288-evb-rk628-rgb2hdmi-avb.dtb \
+	rk3288-evb-rk628-rgb2lvds-avb.dtb \
+	rk3288-evb-rk628-rgb2lvds-dual-avb.dtb \
 	rk3288-evb-rk1608.dtb \
 	rk3288-evb-rk808.dtb \
 	rk3288-evb-rk808-linux.dtb \
@@ -589,6 +597,9 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3308-voice-module-amic-mainboard-v10-aarch32.dtb \
 	rk3308-voice-module-pdm-mainboard-v10-aarch32.dtb \
 	rk3308b-evb-amic-v10-aarch32.dtb \
+	rk3308bs-evb-amic-v11-aarch32.dtb \
+	rk3308bs-evb-dmic-pdm-v11-aarch32.dtb \
+	rk3308bs-evb-mipi-display-v11-aarch32.dtb \
 	rk3326-evb-lp3-v10.dtb \
 	rk3326-863-lp3-v10.dtb \
 	rk3326-evb-lp3-v10-avb.dtb \

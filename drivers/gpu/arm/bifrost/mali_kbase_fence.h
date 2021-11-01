@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2018 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2018, 2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -87,6 +87,8 @@ struct dma_fence *kbase_fence_out_new(struct kbase_jd_atom *katom);
 	} while (0)
 #endif
 
+
+#if !MALI_USE_CSF
 /**
  * kbase_fence_out_remove() - Removes the output fence from atom
  * @katom: Atom to remove output fence for
@@ -139,14 +141,16 @@ static inline bool kbase_fence_out_is_ours(struct kbase_jd_atom *katom)
 static inline int kbase_fence_out_signal(struct kbase_jd_atom *katom,
 					 int status)
 {
+	if (status) {
 #if (KERNEL_VERSION(4, 10, 0) > LINUX_VERSION_CODE && \
 	  KERNEL_VERSION(4, 9, 68) <= LINUX_VERSION_CODE)
-	fence_set_error(katom->dma_fence.fence, status);
+		fence_set_error(katom->dma_fence.fence, status);
 #elif (KERNEL_VERSION(4, 11, 0) <= LINUX_VERSION_CODE)
-	dma_fence_set_error(katom->dma_fence.fence, status);
+		dma_fence_set_error(katom->dma_fence.fence, status);
 #else
-	katom->dma_fence.fence->status = status;
+		katom->dma_fence.fence->status = status;
 #endif
+	}
 	return dma_fence_signal(katom->dma_fence.fence);
 }
 
@@ -265,6 +269,8 @@ bool kbase_fence_free_callbacks(struct kbase_jd_atom *katom);
  * Return: The fence, or NULL if there is no output fence for atom
  */
 #define kbase_fence_out_get(katom) dma_fence_get((katom)->dma_fence.fence)
+
+#endif /* !MALI_USE_CSF */
 
 /**
  * kbase_fence_put() - Releases a reference to a fence

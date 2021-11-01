@@ -454,6 +454,9 @@ static int cdn_dp_connector_mode_valid(struct drm_connector *connector,
 		break;
 	}
 
+	if (!IS_ALIGNED(mode->hdisplay * bpc * 3, 32))
+		return MODE_H_ILLEGAL;
+
 	requested = mode->clock * bpc * 3 / 1000;
 
 	source_max = dp->lanes;
@@ -725,7 +728,7 @@ static int cdn_dp_enable(struct cdn_dp_device *dp)
 	}
 
 	/* Enable hdcp if it's desired */
-	if (dp->connector.state->content_protection ==
+	if (dp->connector.state && dp->connector.state->content_protection ==
 	    DRM_MODE_CONTENT_PROTECTION_DESIRED)
 		ret = cdn_dp_start_hdcp1x_auth(dp);
 
@@ -1512,6 +1515,24 @@ static int cdn_dp_auto_test(struct cdn_dp_device *dp)
 	return 0;
 }
 
+static bool cdn_dp_needs_link_retrain(struct cdn_dp_device *dp)
+{
+	u8 link_status[DP_LINK_STATUS_SIZE];
+
+	/*
+	 * Validate the cached values of link parameters before attempting to
+	 * retrain.
+	 */
+	if (!dp->link.rate || !dp->link.num_lanes)
+		return false;
+
+	if (drm_dp_dpcd_read_link_status(&dp->aux, link_status) < 0)
+		return false;
+
+	/* Retrain if Channel EQ or CR not ok */
+	return !drm_dp_channel_eq_ok(link_status, dp->link.num_lanes);
+}
+
 static void cdn_dp_pd_event_work(struct work_struct *work)
 {
 	struct cdn_dp_device *dp = container_of(work, struct cdn_dp_device,
@@ -1577,7 +1598,7 @@ static void cdn_dp_pd_event_work(struct work_struct *work)
 			cdn_dp_stop_hdcp1x_auth(dp);
 
 	/* Enabled and connected with a sink, re-train if requested */
-	} else if (!cdn_dp_check_link_status(dp)) {
+	} else if (cdn_dp_needs_link_retrain(dp)) {
 		unsigned int rate = dp->link.rate;
 		unsigned int lanes = dp->link.num_lanes;
 		struct drm_display_mode *mode = &dp->mode;

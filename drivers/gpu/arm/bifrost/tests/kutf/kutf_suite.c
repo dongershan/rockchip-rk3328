@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2014, 2017 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2014, 2017-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -40,8 +40,6 @@
 #include <kutf/kutf_resultset.h>
 #include <kutf/kutf_utils.h>
 #include <kutf/kutf_helpers.h>
-
-#if defined(CONFIG_DEBUG_FS)
 
 /**
  * struct kutf_application - Structure which represents kutf application
@@ -242,8 +240,6 @@ static void kutf_add_explicit_result(struct kutf_context *context)
 {
 	switch (context->expected_status) {
 	case KUTF_RESULT_UNKNOWN:
-		if (context->status == KUTF_RESULT_UNKNOWN)
-			kutf_test_pass(context, "(implicit pass)");
 		break;
 
 	case KUTF_RESULT_WARN:
@@ -638,6 +634,17 @@ static void kutf_remove_test_variant(struct kutf_test_fixture *test_fix)
 	kfree(test_fix);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
+/* Adapting to the upstream debugfs_create_x32() change */
+static int ktufp_u32_get(void *data, u64 *val)
+{
+	*val = *(u32 *)data;
+	return 0;
+}
+
+DEFINE_DEBUGFS_ATTRIBUTE(kutfp_fops_x32_ro, ktufp_u32_get, NULL, "0x%08llx\n");
+#endif
+
 void kutf_add_test_with_filters_and_data(
 		struct kutf_suite *suite,
 		unsigned int id,
@@ -672,20 +679,30 @@ void kutf_add_test_with_filters_and_data(
 	}
 
 	test_func->filters = filters;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
+	tmp = debugfs_create_file_unsafe("filters", S_IROTH, test_func->dir,
+					 &test_func->filters, &kutfp_fops_x32_ro);
+#else
 	tmp = debugfs_create_x32("filters", S_IROTH, test_func->dir,
 				 &test_func->filters);
+#endif
 	if (!tmp) {
 		pr_err("Failed to create debugfs file \"filters\" when adding test %s\n", name);
 		goto fail_file;
 	}
 
 	test_func->test_id = id;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 5, 0)
+	debugfs_create_u32("test_id", S_IROTH, test_func->dir,
+                       &test_func->test_id);
+#else
 	tmp = debugfs_create_u32("test_id", S_IROTH, test_func->dir,
 				 &test_func->test_id);
 	if (!tmp) {
 		pr_err("Failed to create debugfs file \"test_id\" when adding test %s\n", name);
 		goto fail_file;
 	}
+#endif
 
 	for (i = 0; i < suite->fixture_variants; i++) {
 		if (create_fixture_variant(test_func, i)) {
@@ -1141,6 +1158,8 @@ void kutf_test_abort(struct kutf_context *context)
 }
 EXPORT_SYMBOL(kutf_test_abort);
 
+#ifdef CONFIG_DEBUG_FS
+
 /**
  * init_kutf_core() - Module entry point.
  *
@@ -1175,7 +1194,7 @@ static void __exit exit_kutf_core(void)
 		destroy_workqueue(kutf_workq);
 }
 
-#else	/* defined(CONFIG_DEBUG_FS) */
+#else	/* CONFIG_DEBUG_FS */
 
 /**
  * init_kutf_core() - Module entry point.
@@ -1197,7 +1216,7 @@ static int __init init_kutf_core(void)
 static void __exit exit_kutf_core(void)
 {
 }
-#endif	/* defined(CONFIG_DEBUG_FS) */
+#endif	/* CONFIG_DEBUG_FS */
 
 MODULE_LICENSE("GPL");
 

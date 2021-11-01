@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2012-2015 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2012-2015, 2018-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -21,7 +21,7 @@
  */
 
 #include <mali_kbase.h>
-#include <backend/gpu/mali_kbase_device_internal.h>
+#include <device/mali_kbase_device.h>
 #include "mali_kbase_debug_job_fault.h"
 
 #ifdef CONFIG_DEBUG_FS
@@ -70,6 +70,8 @@ static int mmu_reg_snapshot[] = {
 static int as_reg_snapshot[] = {
 	AS_TRANSTAB_LO,
 	AS_TRANSTAB_HI,
+	AS_TRANSCFG_LO,
+	AS_TRANSCFG_HI,
 	AS_MEMATTR_LO,
 	AS_MEMATTR_HI,
 	AS_FAULTSTATUS,
@@ -152,7 +154,7 @@ bool kbase_job_fault_get_reg_snapshot(struct kbase_context *kctx)
 	while (kctx->reg_dump[offset] != REGISTER_DUMP_TERMINATION_FLAG) {
 		kctx->reg_dump[offset+1] =
 				kbase_reg_read(kctx->kbdev,
-						kctx->reg_dump[offset], NULL);
+						kctx->reg_dump[offset]);
 		offset += 2;
 	}
 	return true;

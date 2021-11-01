@@ -84,7 +84,7 @@ static const struct dwc2_core_params params_hi6220 = {
 					  GAHBCFG_HBSTLEN_SHIFT,
 	.uframe_sched			= 0,
 	.external_id_pin_ctl		= -1,
-	.hibernation			= -1,
+	.power_down			= -1,
 };
 
 static const struct dwc2_core_params params_bcm2835 = {
@@ -115,7 +115,7 @@ static const struct dwc2_core_params params_bcm2835 = {
 	.ahbcfg				= 0x10,
 	.uframe_sched			= 0,
 	.external_id_pin_ctl		= -1,
-	.hibernation			= -1,
+	.power_down			= -1,
 };
 
 static const struct dwc2_core_params params_rk3066 = {
@@ -147,7 +147,7 @@ static const struct dwc2_core_params params_rk3066 = {
 					  GAHBCFG_HBSTLEN_SHIFT,
 	.uframe_sched			= -1,
 	.external_id_pin_ctl		= -1,
-	.hibernation			= -1,
+	.power_down			= -1,
 };
 
 static const struct dwc2_core_params params_ltq = {
@@ -179,7 +179,7 @@ static const struct dwc2_core_params params_ltq = {
 					  GAHBCFG_HBSTLEN_SHIFT,
 	.uframe_sched			= -1,
 	.external_id_pin_ctl		= -1,
-	.hibernation			= -1,
+	.power_down			= -1,
 };
 
 /*
@@ -655,6 +655,14 @@ static int dwc2_driver_probe(struct platform_device *dev)
 				  dev_name(hsotg->dev), hsotg);
 	if (retval)
 		return retval;
+
+	hsotg->vbus_supply = devm_regulator_get_optional(hsotg->dev, "vbus");
+	if (IS_ERR(hsotg->vbus_supply)) {
+		retval = PTR_ERR(hsotg->vbus_supply);
+		hsotg->vbus_supply = NULL;
+		if (retval != -ENODEV)
+			return retval;
+	}
 
 	retval = dwc2_lowlevel_hw_enable(hsotg);
 	if (retval)
