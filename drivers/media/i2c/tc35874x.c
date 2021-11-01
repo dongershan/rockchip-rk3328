@@ -1510,31 +1510,6 @@ static int tc35874x_dv_timings_cap(struct v4l2_subdev *sd,
 	return 0;
 }
 
-struct tc35874x_mode {
-	u32 bus_fmt;
-	u32 width;
-	u32 height;
-	struct v4l2_fract max_fps;
-};
-
-static const struct tc35874x_mode supported_modes[] = {
-	{
-		.bus_fmt = MEDIA_BUS_FMT_UYVY8_2X8,
-		.width = 1920,
-		.height = 1080,
-		.max_fps = {
-			.numerator = 10000,
-			.denominator = 600000,
-		},
-	},
-};
-static int tc35874x_g_frame_interval(struct v4l2_subdev *sd,
-				   struct v4l2_subdev_frame_interval *fi)
-{
-	fi->interval = supported_modes[0].max_fps;
-	return 0;
-}
-
 static int tc35874x_g_mbus_config(struct v4l2_subdev *sd,
 			     struct v4l2_mbus_config *cfg)
 {
@@ -1591,26 +1566,6 @@ static int tc35874x_enum_mbus_code(struct v4l2_subdev *sd,
 	default:
 		return -EINVAL;
 	}
-	return 0;
-}
-
-static int tc35874x_enum_frame_interval(struct v4l2_subdev *sd,
-				      struct v4l2_subdev_pad_config *cfg,
-				struct v4l2_subdev_frame_interval_enum *fie)
-{
-	fie->code = supported_modes[0].bus_fmt;
-	fie->width = supported_modes[0].width;
-	fie->height = supported_modes[0].height;
-	fie->interval = supported_modes[0].max_fps;
-	return 0;
-}
-
-static int tc35874x_enum_frame_sizes(struct v4l2_subdev *sd,
-				   struct v4l2_subdev_pad_config *cfg,
-				   struct v4l2_subdev_frame_size_enum *fse)
-{
-	fse->max_width = supported_modes[0].width;
-	fse->max_height = supported_modes[0].height;
 	return 0;
 }
 
@@ -1853,15 +1808,12 @@ static const struct v4l2_subdev_video_ops tc35874x_video_ops = {
 	.s_dv_timings = tc35874x_s_dv_timings,
 	.g_dv_timings = tc35874x_g_dv_timings,
 	.query_dv_timings = tc35874x_query_dv_timings,
-	.g_frame_interval = tc35874x_g_frame_interval,
 	.g_mbus_config = tc35874x_g_mbus_config,
 	.s_stream = tc35874x_s_stream,
 };
 
 static const struct v4l2_subdev_pad_ops tc35874x_pad_ops = {
 	.enum_mbus_code = tc35874x_enum_mbus_code,
-	.enum_frame_size = tc35874x_enum_frame_sizes,
-	.enum_frame_interval = tc35874x_enum_frame_interval,
 	.set_fmt = tc35874x_set_fmt,
 	.get_fmt = tc35874x_get_fmt,
 	.get_edid = tc35874x_g_edid,
