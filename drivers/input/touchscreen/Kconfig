@@ -393,6 +393,14 @@ config TOUCHSCREEN_GT9XX
 	  code includes that in its table of IIC devices.
 	  If unsure, say N.
 
+config TOUCHSCREEN_HX83102
+	bool "HIMAX HX83102"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you have Himax touch panel.
+	  If unsure, say N.
+
 config TOUCHSCREEN_ILI210X
 	tristate "Ilitek ILI210X based touchscreen"
 	depends on I2C
@@ -1169,5 +1177,6 @@ config TOUCHSCREEN_VTL_CT36X
 
 config TOUCHSCREEN_GT1X
 	tristate "GT1X touchscreens support"
+
 
 endif
