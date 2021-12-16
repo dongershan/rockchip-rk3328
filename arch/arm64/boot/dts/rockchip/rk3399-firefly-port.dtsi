@@ -253,10 +253,7 @@
 		/* conflict with csi-ctl-gpios */
 		reset-gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;
 		pwdn-gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "rockchip,camera_default", "rockchip,camera_sleep";
-		//pinctrl-0 = <&cif_clkout>;
-		pinctrl-0 = <&cam0_default_pins>;
-		pinctrl-1 = <&cam0_sleep_pins>;
+
 		rockchip,camera-module-index = <0>;
 		rockchip,camera-module-facing = "back";
 		rockchip,camera-module-name = "CMK-CT0116";
@@ -284,10 +281,7 @@
 		/* conflict with csi-ctl-gpios */
 		reset-gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;
 		pwdn-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "rockchip,camera_default", "rockchip,camera_sleep";
-		//pinctrl-0 = <&cif_clkout>;
-		pinctrl-0 = <&cam0_default_pins>;
-		pinctrl-1 = <&cam0_sleep_pins>;
+
 		rockchip,camera-module-index = <1>;
 		rockchip,camera-module-facing = "back";
 		rockchip,camera-module-name = "CMK-CT0116";
@@ -489,7 +483,7 @@
 				<2 19 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-	
+
 	cam0 {
                 cif_pwr: cif-pwr {
                         rockchip,pins = <1 17 RK_FUNC_GPIO &pcfg_pull_down>;
