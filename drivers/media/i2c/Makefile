@@ -142,3 +142,4 @@ obj-$(CONFIG_VIDEO_FP5510)	+= fp5510.o
 obj-$(CONFIG_VIDEO_VIRT_CAMERA) += virtual-camera.o
 obj-$(CONFIG_VIDEO_XC7022) += xc7022.o
 obj-$(CONFIG_VIDEO_XC7022) += xc6130.o
+obj-$(CONFIG_VIDEO_XC7160) += xc7160.o
