@@ -4,6 +4,42 @@
 / {
 	model = "Firefly roc-rk3399-pc";
 	compatible = "firefly,roc-rk3399-pc", "rockchip,rk3399";
+
+	wireless_wlan: wireless-wlan {
+		compatible = "wlan-platdata";
+		rockchip,grf = <&grf>;
+		wifi_chip_type = "ap6354";
+		sdio_vref = <1800>;
+		WIFI,host_wake_irq = <&gpio0 3 GPIO_ACTIVE_HIGH>; /* GPIO0_a3 */
+		status = "disabled";
+	};
+
+	wireless_bluetooth: wireless-bluetooth {
+		compatible = "bluetooth-platdata";
+		//wifi-bt-power-toggle;
+		clocks = <&rk808 1>;
+		clock-name = "ext_clock";
+		uart_rts_gpios = <&gpio2 19 GPIO_ACTIVE_LOW>; /* GPIO2_C3 */
+		pinctrl-names = "default", "rts_gpio";
+		pinctrl-0 = <&uart0_rts>;
+		pinctrl-1 = <&uart0_gpios>;
+		//BT,power_gpio  = <&gpio3 19 GPIO_ACTIVE_HIGH>; /* GPIOx_xx */
+		BT,reset_gpio    = <&gpio0 9 GPIO_ACTIVE_HIGH>; /* GPIO0_B1 */
+		BT,wake_gpio     = <&gpio2 26 GPIO_ACTIVE_HIGH>; /* GPIO2_D2 */
+		BT,wake_host_irq = <&gpio0 4 GPIO_ACTIVE_HIGH>; /* GPIO0_A4 */
+		status = "disabled";
+	};
+
+};
+
+
+&pinctrl {
+	wireless-bluetooth {
+		uart0_gpios: uart0-gpios {
+		rockchip,pins =
+				<2 19 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
 
 &wireless_wlan {
